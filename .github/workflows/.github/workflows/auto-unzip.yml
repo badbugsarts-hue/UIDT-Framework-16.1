@@ -1,11 +1,12 @@
-name: Auto-Unzip Uploads
+name: Auto-Unzip Existing and New ZIPs
 
 on:
+  workflow_dispatch:   # manuell auslösbar
   push:
     branches:
-      - main               # Workflow reagiert nur auf Pushes im main-Branch
+      - main
     paths:
-      - "uploads/*"        # Nur Änderungen in uploads/ triggern den Workflow
+      - "uploads/*"
 
 jobs:
   unzip:
@@ -30,14 +31,13 @@ jobs:
       - name: Find and unzip files
         run: |
           mkdir -p release
+          shopt -s nullglob
           for f in uploads/*.[zZ][iI][pP]; do
-            if [ -f "$f" ]; then
-              echo "📦 Entpacke $f..."
-              unzip -o "$f" -d "release/${f##*/}"
-            fi
+            echo "📦 Entpacke $f..."
+            unzip -o "$f" -d "release/${f##*/}"
           done
 
-      # 5️⃣ Änderungen committen & pushen
+      # 5️⃣ Commit und push
       - name: Commit and push
         run: |
           git config user.name "github-actions"
