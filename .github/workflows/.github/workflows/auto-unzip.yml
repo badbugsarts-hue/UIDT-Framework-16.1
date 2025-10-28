@@ -2,28 +2,42 @@ name: Auto-Unzip Uploads
 
 on:
   push:
+    branches:
+      - main               # Workflow reagiert nur auf Pushes im main-Branch
     paths:
-      - "uploads/*.zip"   # nur ZIPs im Ordner uploads/ lösen Workflow aus
+      - "uploads/*"        # Nur Änderungen in uploads/ triggern den Workflow
 
 jobs:
   unzip:
     runs-on: ubuntu-latest
 
     steps:
+      # 1️⃣ Repo auschecken
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      # 2️⃣ Install unzip
       - name: Install unzip
-        run: sudo apt-get install -y unzip
+        run: sudo apt-get update && sudo apt-get install -y unzip
 
-      - name: Unzip files
+      # 3️⃣ Debug: Zeige Inhalt von uploads/
+      - name: Debug list
+        run: |
+          echo "📂 Inhalt uploads:"
+          ls -la uploads/
+
+      # 4️⃣ Entpacken aller ZIP-Dateien
+      - name: Find and unzip files
         run: |
           mkdir -p release
-          for f in uploads/*.zip; do
-            echo "📦 Entpacke $f..."
-            unzip -o "$f" -d "release/${f##*/}"
+          for f in uploads/*.[zZ][iI][pP]; do
+            if [ -f "$f" ]; then
+              echo "📦 Entpacke $f..."
+              unzip -o "$f" -d "release/${f##*/}"
+            fi
           done
 
+      # 5️⃣ Änderungen committen & pushen
       - name: Commit and push
         run: |
           git config user.name "github-actions"
