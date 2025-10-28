@@ -26,7 +26,7 @@ jobs:
           echo "📂 Inhalt uploads:"
           ls -la uploads/
 
-      # 4️⃣ Entpacken aller ZIP-Dateien
+      # 4️⃣ Entpacken aller ZIP-Dateien (alle Endungen: .zip/.ZIP)
       - name: Find and unzip files
         run: |
           mkdir -p release
