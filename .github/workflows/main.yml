@@ -1,0 +1,47 @@
+name: Auto-Unzip Existing and New ZIPs
+
+on:
+  workflow_dispatch:   # manuell auslösbar
+  push:
+    branches:
+      - main
+    paths:
+      - "uploads/*"
+
+jobs:
+  unzip:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Repo auschecken
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # 2️⃣ Install unzip
+      - name: Install unzip
+        run: sudo apt-get update && sudo apt-get install -y unzip
+
+      # 3️⃣ Debug: Zeige Inhalt von uploads/
+      - name: Debug list
+        run: |
+          echo "📂 Inhalt uploads:"
+          ls -la uploads/
+
+      # 4️⃣ Entpacken aller ZIP-Dateien (alle Endungen: .zip/.ZIP)
+      - name: Find and unzip files
+        run: |
+          mkdir -p release
+          shopt -s nullglob
+          for f in uploads/*.[zZ][iI][pP]; do
+            echo "📦 Entpacke $f..."
+            unzip -o "$f" -d "release/${f##*/}"
+          done
+
+      # 5️⃣ Commit und push
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add release/
+          git commit -m "Auto-unzipped uploaded archive(s)" || echo "Nothing to commit"
+          git push
