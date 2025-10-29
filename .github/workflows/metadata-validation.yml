@@ -29,10 +29,10 @@ jobs:
         run: pip install pyyaml jsonschema
 
       - name: Validate YAML metadata
-        run: python scripts/validate_metadata.py metadata/
+        run: python workflow/validate_metadata.py metadata/
 
       - name: Convert YAML to JSON
-        run: python scripts/convert_metadata.py metadata/ output/
+        run: python workflow/convert_metadata.py metadata/ output/
 
       - name: Upload converted JSON
         uses: actions/upload-artifact@v4
