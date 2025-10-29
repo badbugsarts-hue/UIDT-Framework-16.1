@@ -1,3 +1,4 @@
+```markdown
 # 🧬 Unified Information-Density Theory (UIDT)
 
 *A Paradigm Shift: Establishing Information as the Fundamental Force in Physics*
