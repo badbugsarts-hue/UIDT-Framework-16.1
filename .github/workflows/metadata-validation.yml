@@ -2,7 +2,7 @@ name: Validate and Convert Metadata
 
 on:
   push:
-    branches: [ framework ]
+    branches: [ main]
     paths:
       - 'metadata.yml'
   pull_request:
