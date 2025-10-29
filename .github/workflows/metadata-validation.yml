@@ -6,7 +6,7 @@ on:
     paths:
       - 'metadata.yml'
   pull_request:
-    branches: [ framework ]
+    branches: [ main ]
     paths:
       - 'metadata.yml'
   workflow_dispatch:
