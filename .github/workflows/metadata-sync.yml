@@ -13,15 +13,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Sync metadata.json to other branches
+      - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          
-          for branch in main dev release; do
+
+      - name: Sync metadata.json to other branches
+        run: |
+          branches=("dev" "release")  # Hier alle anderen Branches eintragen
+          for branch in "${branches[@]}"; do
+            git fetch origin $branch
             git checkout $branch
-            cp metadata.json metadata.json
+            cp ../metadata.json ./metadata.json || true  # aus übergeordnetem Verzeichnis holen
             git add metadata.json
-            git commit -m "Sync metadata.json from $GITHUB_REF" || echo "No changes"
+            git diff-index --quiet HEAD || git commit -m "Sync metadata.json from main"
             git push origin $branch
           done
