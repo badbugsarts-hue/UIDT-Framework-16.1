@@ -1,3 +1,5 @@
+'''markdown
+
 # 🧬 Unified Information-Density Theory (UIDT)
 
 *A Paradigm Shift: Establishing Information as the Fundamental Force in Physics*
@@ -255,3 +257,4 @@ CC BY 4.0 © Philipp Rietz, 2025. Attribute with.
 Contributing, Community, and Contact
 Fork, PR; issues for discussion. Email for collab.
 
+'''
