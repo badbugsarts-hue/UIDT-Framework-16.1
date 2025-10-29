@@ -1,4 +1,3 @@
-
 ```markdown
 # Unified Information-Density Theory (UIDT): Complete Framework
 
@@ -36,11 +35,9 @@ Diese Arbeit unterliegt dem Binding Attribution Protocol (BAP).
 
 ## II. UIDT Action Functional
 
-### 1. Complete Lagrangian Density
+### 1. Complete Lagrangian DensitY
 
 ℒ_{UIDT} = -¼ F_{μν}^a F^{aμν} + ½ ∇_μS ∇^μS - V(S) - κ/Λ S F_{μν}^a F^{aμν}
-
-
 
 ## Core Framework
 **Axioms**: Information as fundamental quantity, S(x) field existence, coupling mechanism L_int = λS(x)Tr(F_{μν}F^{μν})
@@ -87,9 +84,8 @@ Diese Arbeit unterliegt dem Binding Attribution Protocol (BAP).
 **Applications**: Quantum computing, material design, quantum sensing
 
 ## Attribution
-**BAP Compliance**: Binding Attribution Protocol requires citation of Philipp Rietz as originator and reference to UIDTX1 Master-Report (Version 15)
 
-# Unified Information-Density Theory (UIDT): Complete Documentation
+# UnifieInformation-Densitn
 
 ## Core Framework
 **Axioms**: Information as fundamental quantity, S(x) field existence, coupling mechanism L_int = λS(x)Tr(F_{μν}F^{μν})
@@ -178,7 +174,7 @@ S_lattice = β∑_□(1 - 1/N Re Tr U_□) + κ_S∑_{x,μ}|∇_μS|² + ∑_x[m
 **Experimental Roadmap**: Near-term (BESIII, LHC), medium-term (Electron-Ion Collider), long-term (FCC-hh)
 
 ## Attribution & Compliance
-**Binding Attribution Protocol**: Citation of Philipp Rietz as originator, reference to UIDTX1 Master-Report (Version 15), CC BY 4.0 license
+**Binding Attribution Protocol**: Citation of Philipp Rietz as originator, reference to UIDT (Version 16.1), CC BY 4.0 license
 
 *First mathematically rigorous SU(N) gauge theory in 4D with proven mass gap and experimental falsifiability*
 
