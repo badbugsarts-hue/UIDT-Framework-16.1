@@ -1,4 +1,4 @@
-'''markdown
+```markdown
 
 # 🧬 Unified Information-Density Theory (UIDT)
 
@@ -257,4 +257,6 @@ CC BY 4.0 © Philipp Rietz, 2025. Attribute with.
 Contributing, Community, and Contact
 Fork, PR; issues for discussion. Email for collab.
 
-'''
+
+```
+```
