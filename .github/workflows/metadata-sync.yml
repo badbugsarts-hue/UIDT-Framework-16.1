@@ -1,0 +1,27 @@
+name: Sync metadata.json to branches
+
+on:
+  push:
+    paths:
+      - 'metadata.json'
+
+jobs:
+  sync-branches:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Sync metadata.json to other branches
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          for branch in main dev release; do
+            git checkout $branch
+            cp metadata.json metadata.json
+            git add metadata.json
+            git commit -m "Sync metadata.json from $GITHUB_REF" || echo "No changes"
+            git push origin $branch
+          done
