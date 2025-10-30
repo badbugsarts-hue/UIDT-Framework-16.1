@@ -1,5 +1,6 @@
 name: Update Function Branches
 
+# Trigger manuell
 on:
   workflow_dispatch:
 
@@ -8,51 +9,66 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      # Repository auschecken
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v4
+      # Python einrichten
+      - name: Setup Python
+        uses: actions/setup-python@v4
         with:
           python-version: "3.11"
 
+      # Abhängigkeiten installieren
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install json5 tabulate
 
+      # Funktionen verarbeiten
       - name: Process functions
         run: |
           python - << 'EOF'
 import json5, os, subprocess
 from tabulate import tabulate
 
-if not os.path.exists("zenodo.json"):
+# Prüfen, ob die JSON-Datei existiert
+json_file = "zenodo.json"
+if not os.path.exists(json_file):
     print("ERROR: zenodo.json not found!")
     exit(1)
 
-with open("zenodo.json", "r") as f:
+# JSON laden
+with open(json_file, "r") as f:
     data = json5.load(f)
 
 dashboard = []
 
+# Branches erstellen und committen
 for idx, func in enumerate(data.get("workExample", []), 1):
-    branch = f"func-{func['name'].replace(' ', '-').lower()}-v{idx}"
-    subprocess.run(["git", "checkout", "-b", branch])
+    branch_name = f"func-{func['name'].replace(' ', '-').lower()}-v{idx}"
+    # Branch erstellen
+    subprocess.run(["git", "checkout", "-b", branch_name], check=True)
     os.makedirs("functions", exist_ok=True)
     filename = f"functions/{func['name'].replace(' ', '-').lower()}.json"
     json5.dump({"workExample": [func]}, open(filename, "w"), indent=2)
-    subprocess.run(["git", "add", filename])
-    subprocess.run(["git", "commit", "-m", f"Add function {func['name']} v{idx}"])
-    subprocess.run(["git", "push", "-u", "origin", branch])
-    dashboard.append({"Function": func["name"], "Branch": branch, "Version": idx})
+    subprocess.run(["git", "add", filename], check=True)
+    subprocess.run(["git", "commit", "-m", f"Add function {func['name']} v{idx}"], check=True)
+    subprocess.run(["git", "push", "-u", "origin", branch_name], check=True)
+    dashboard.append({"Function": func["name"], "Branch": branch_name, "Version": idx})
 
+# Dashboard speichern
 os.makedirs("dashboard", exist_ok=True)
 json5.dump(dashboard, open("dashboard/functions-dashboard.json", "w"), indent=2)
+print("\n==== FUNCTIONS DASHBOARD ====\n")
 print(tabulate(dashboard, headers="keys", tablefmt="github"))
 EOF
 
-      - uses: actions/upload-artifact@v4
+      # Dashboard hochladen
+      - name: Upload dashboard
+        uses: actions/upload-artifact@v4
         with:
           name: functions-dashboard
           path: dashboard/functions-dashboard.json
