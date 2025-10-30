@@ -1,35 +1,23 @@
-name: Fail-Safe JSON Repair
+name: JSON Repair and Push
 
 on:
   push:
     branches:
       - main
-  workflow_dispatch:
 
 jobs:
-  json-repair:
+  repair-json:
     runs-on: ubuntu-latest
-
     steps:
-      # 1️⃣ Repository auschecken
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-
-      # 2️⃣ Python einrichten
-      - name: Setup Python
+      - uses: actions/checkout@v3
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.12'  # kannst du auf 3.11 ändern, wenn nötig
-
-      # 3️⃣ Abhängigkeiten installieren
+          python-version: '3.12'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install json5 PyGithub tabulate
-
-      # 4️⃣ JSON-Reparatur Script ausführen
-      - name: Run JSON Repair Script
+          pip install json5 tabulate PyGithub
+      - name: Run JSON Repair
         run: python scripts/repair_json.py
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
