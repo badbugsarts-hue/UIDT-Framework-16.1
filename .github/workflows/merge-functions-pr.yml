@@ -1,0 +1,44 @@
+name: Merge Functions PR
+
+on:
+  workflow_dispatch: # manuell auslösbar
+
+jobs:
+  merge-and-generate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # alle Branches abrufen
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Merge all functions from branches
+        run: python scripts/merge_functions.py
+
+      - name: Generate Python modules from merged JSON
+        run: python scripts/generate_functions.py
+
+      - name: Upload merged zenodo.json
+        uses: actions/upload-artifact@v4
+        with:
+          name: zenodo-json
+          path: zenodo.json
+
+      - name: Upload Python modules
+        uses: actions/upload-artifact@v4
+        with:
+          name: uidt-functions
+          path: uidt_functions/
+
+      - name: Commit and push merged functions
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Merge all functions and generate Python modules"
+          branch: main
+          push: true

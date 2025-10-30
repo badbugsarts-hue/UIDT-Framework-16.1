@@ -1,0 +1,43 @@
+name: JSON Functions PR
+
+# Trigger: läuft auf Pushes in den Feature-Branches
+on:
+  push:
+    branches:
+      - 'feature/**'  # Alle Branches, die mit "feature/" anfangen
+
+jobs:
+  generate-functions:
+    name: Generate JSON Functions PR
+    runs-on: ubuntu-latest
+
+    steps:
+      # Repository auschecken
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Optional: Python einrichten, falls Scripts laufen müssen
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      # JSON reparieren oder Funktionen generieren
+      - name: Run JSON repair/generation script
+        run: |
+          python scripts/repair_json.py
+          python scripts/validate_metadata.py metadata/
+
+      # PR erstellen oder aktualisieren
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          branch: fail-safe-json-repair-dashboard
+          commit_message: "Update JSON functions"
+          file_pattern: |
+            metadata.json
+            zenodo.json
+          commit_user_name: "GitHub Actions Bot"
+          commit_user_email: "actions@github.com"

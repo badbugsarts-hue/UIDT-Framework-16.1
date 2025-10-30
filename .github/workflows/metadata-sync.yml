@@ -1,0 +1,48 @@
+name: Metadata Validation & Repair
+
+on:
+  push:
+    paths:
+      - 'metadata/**'
+      - 'scripts/**'
+  pull_request:
+    paths:
+      - 'metadata/**'
+      - 'scripts/**'
+
+jobs:
+  validate-and-repair:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Repository auschecken
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # 2. Python einrichten
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+
+    # 3. Optional: Abhängigkeiten installieren
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        # pip install pyyaml jsonschema  # falls benötigt
+
+    # 4. Metadata validieren
+    - name: Run validate_metadata.py
+      run: python scripts/validate_metadata.py metadata/
+
+    # 5. JSON reparieren
+    - name: Run repair_json.py
+      run: python scripts/repair_json.py
+
+    # 6. Ergebnisse als Artifacts speichern (optional, Download möglich)
+    - name: Upload JSON artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: repaired-json
+        path: |
+          zenodo.json_block*.json
