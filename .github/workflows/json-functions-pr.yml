@@ -33,18 +33,18 @@ jobs:
           gh auth status || gh auth login --web
 
       - name: Process functions and manage branches + PRs
+        shell: bash
         run: |
-          python - << 'EOF'
+          python <<'EOF'
 import json5, os, subprocess, re
 from tabulate import tabulate
 
-# Lade Daten
+# Load zenodo.json with all functions
 with open("zenodo.json", "r") as f:
     data = json5.load(f)
 
 dashboard = []
 
-# Hilfsfunktionen
 def get_existing_branches():
     result = subprocess.run(["git", "branch", "-r"], capture_output=True, text=True)
     branches = [b.strip().replace("origin/", "") for b in result.stdout.splitlines()]
@@ -70,7 +70,6 @@ def create_new_version_branch(func, version):
     return branch_name
 
 def create_pr(branch_name, func_name, version):
-    # Prüfen, ob PR existiert
     result = subprocess.run(["gh", "pr", "list", "--head", branch_name], capture_output=True, text=True)
     if result.stdout.strip() == "":
         subprocess.run([
@@ -83,20 +82,16 @@ def create_pr(branch_name, func_name, version):
         return True
     return False
 
-# Bestehende Branches prüfen
 existing_branches = get_existing_branches()
 
-# Branches pro Funktion erzeugen
 for func in data.get("workExample", []):
     name_clean = func["name"].replace(" ", "-").lower()
     prefix = f"func-{name_clean}-v"
     versions = [int(re.search(r'v(\d+)', b).group(1)) for b in existing_branches if b.startswith(prefix) and "-archived" not in b]
     latest_version = max(versions) if versions else 0
-    # Alte Branch archivieren
     for b in existing_branches:
         if b.startswith(prefix) and "-archived" not in b:
             archive_branch(b)
-    # Neue Branch erzeugen
     new_version = latest_version + 1
     branch_name = create_new_version_branch(func, new_version)
     pr_created = create_pr(branch_name, func["name"], new_version)
@@ -107,7 +102,6 @@ for func in data.get("workExample", []):
         "PR Created": pr_created
     })
 
-# Dashboard speichern
 os.makedirs("dashboard", exist_ok=True)
 json5.dump(dashboard, open("dashboard/functions-dashboard.json", "w"), indent=2)
 print("\n==== FUNCTIONS DASHBOARD ====\n")
