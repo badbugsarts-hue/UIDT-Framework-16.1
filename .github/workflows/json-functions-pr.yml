@@ -1,62 +1,95 @@
+name: Update Function Branches with Versioning
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  update-functions:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install json5 tabulate
+
       - name: Process functions with versioning and archiving
         run: |
           python - << 'EOF'
-          import json5, os, subprocess, re
+import json5, os, subprocess, re
+from tabulate import tabulate
 
-          repo_dir = os.getcwd()
+# Pfad zur Zenodo JSON
+ZENODO_FILE = "zenodo.json"
 
-          with open("zenodo.json", "r") as f:
-              data = json5.load(f)
+with open(ZENODO_FILE, "r") as f:
+    data = json5.load(f)
 
-          dashboard = []
+dashboard = []
 
-          def get_latest_version(func_name):
-              branches = subprocess.check_output(["git", "branch", "-r"]).decode().splitlines()
-              branches = [b.strip().replace("origin/", "") for b in branches]
-              prefix = f"func-{func_name}-v"
-              version_branches = [b for b in branches if b.startswith(prefix) and '-archived' not in b]
-              if not version_branches:
-                  return None, 0
-              versions = [int(re.search(r'v(\d+)', b).group(1)) for b in version_branches]
-              latest_version = max(versions)
-              latest_branch = [b for b in version_branches if f'v{latest_version}' in b][0]
-              return latest_branch, latest_version
+def get_latest_version(func_name):
+    branches = subprocess.check_output(["git", "branch", "-r"], text=True).splitlines()
+    prefix = f"origin/func-{func_name}-v"
+    version_branches = [b.strip().replace("origin/", "") for b in branches if b.strip().startswith(prefix) and '-archived' not in b]
+    if not version_branches:
+        return None, 0
+    versions = [int(re.search(r'v(\d+)', b).group(1)) for b in version_branches]
+    latest_version = max(versions)
+    latest_branch = [b for b in version_branches if f"v{latest_version}" in b][0]
+    return latest_branch, latest_version
 
-          def archive_branch(branch_name):
-              archived_name = branch_name + "-archived"
-              subprocess.run(["git", "branch", "-m", branch_name, archived_name])
-              subprocess.run(["git", "push", "origin", f'{archived_name}:{archived_name}'])
-              subprocess.run(["git", "push", "origin", "--delete", branch_name])
+def archive_branch(branch_name):
+    archived_name = branch_name + "-archived"
+    subprocess.run(["git", "branch", "-m", branch_name, archived_name], check=True)
+    subprocess.run(["git", "push", "origin", f'{archived_name}:{archived_name}'], check=True)
+    subprocess.run(["git", "push", "origin", "--delete", branch_name], check=True)
 
-          def create_new_version_branch(func, latest_version):
-              name_clean = func["name"].replace(" ", "-").lower()
-              new_version = latest_version + 1
-              branch_name = f"func-{name_clean}-v{new_version}"
-              subprocess.run(["git", "checkout", "-b", branch_name])
-              os.makedirs("functions", exist_ok=True)
-              filename = f"functions/{name_clean}.json"
-              json5.dump({"workExample": [func]}, open(filename, "w"), indent=2)
-              subprocess.run(["git", "add", filename])
-              subprocess.run(["git", "commit", "-m", f"Add function {func['name']} version v{new_version}"])
-              subprocess.run(["git", "push", "-u", "origin", branch_name])
-              return branch_name, new_version
+def create_new_version_branch(func, latest_version):
+    name_clean = func["name"].replace(" ", "-").lower()
+    new_version = latest_version + 1
+    branch_name = f"func-{name_clean}-v{new_version}"
+    subprocess.run(["git", "checkout", "-b", branch_name], check=True)
+    os.makedirs("functions", exist_ok=True)
+    filename = f"functions/{name_clean}.json"
+    json5.dump({"workExample": [func]}, open(filename, "w"), indent=2)
+    subprocess.run(["git", "add", filename], check=True)
+    subprocess.run(["git", "commit", "-m", f"Add function {func['name']} version v{new_version}"], check=True)
+    subprocess.run(["git", "push", "-u", "origin", branch_name], check=True)
+    return branch_name, new_version
 
-          for func in data.get("workExample", []):
-              name_clean = func["name"].replace(" ", "-").lower()
-              latest_branch, latest_version = get_latest_version(name_clean)
-              if latest_branch:
-                  archive_branch(latest_branch)
-              new_branch, new_version = create_new_version_branch(func, latest_version)
-              dashboard.append({
-                  "Function": func["name"],
-                  "Branch": new_branch,
-                  "Version": new_version,
-                  "Archived": latest_branch if latest_branch else None
-              })
+for func in data.get("workExample", []):
+    name_clean = func["name"].replace(" ", "-").lower()
+    latest_branch, latest_version = get_latest_version(name_clean)
+    if latest_branch:
+        archive_branch(latest_branch)
+    new_branch, new_version = create_new_version_branch(func, latest_version)
+    dashboard.append({
+        "Function": func["name"],
+        "Branch": new_branch,
+        "Version": new_version,
+        "Archived": latest_branch if latest_branch else None
+    })
 
-          os.makedirs("dashboard", exist_ok=True)
-          json5.dump(dashboard, open("dashboard/functions-dashboard.json", "w"), indent=2)
-          print("\n\n==== FUNCTIONS DASHBOARD ====\n")
-          from tabulate import tabulate
-          print(tabulate(dashboard, headers="keys", tablefmt="github"))
-          EOF
+os.makedirs("dashboard", exist_ok=True)
+json5.dump(dashboard, open("dashboard/functions-dashboard.json", "w"), indent=2)
+print("\n\n==== FUNCTIONS DASHBOARD ====\n")
+print(tabulate(dashboard, headers="keys", tablefmt="github"))
+EOF
+
+      - name: Upload dashboard as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: functions-dashboard
+          path: dashboard/functions-dashboard.json
