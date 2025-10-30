@@ -104,6 +104,6 @@ if changed_files:
 
 else:
     print("No files changed")
-    with open("repair_log.log", "w", encoding="utf-8") as log_file:
+    with open(subfile, "w", encoding="utf-8") as sf:
     for line in logs:
-        log_file.write(line + "\n")
+        logs.append(f"Extracted faulty block to {subfile}")
