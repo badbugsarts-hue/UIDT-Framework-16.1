@@ -1,24 +1,60 @@
-name: JSON Repair and Push
+name: 🧩 Fail-Safe JSON Repair & Auto-Retry
 
 on:
+  workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
+  schedule:
+    - cron: "0 3 * * *" # Täglicher Check um 3 Uhr
 
 jobs:
-  repair-json:
+  repair_json:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: 🔄 Repository klonen
+        uses: actions/checkout@v4
+
+      - name: 🐍 Python einrichten
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-      - name: Install dependencies
+          python-version: "3.11"
+
+      - name: 📦 Abhängigkeiten installieren
         run: |
           pip install json5 tabulate PyGithub
-      - name: Run JSON Repair
-        run: python scripts/repair_json.py
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
+
+      - name: 🛠️ JSON-Dateien prüfen und reparieren
+        id: repair
+        run: |
+          set +e  # kein Abbruch bei Fehlern
+          attempt=0
+          max_attempts=3
+
+          until [ "$attempt" -ge "$max_attempts" ]
+          do
+            echo "🌀 Versuch $((attempt+1)) von $max_attempts..."
+            python scripts/repair_json.py && break
+            attempt=$((attempt+1))
+            echo "❌ Versuch $attempt fehlgeschlagen, warte 10 Sekunden..."
+            sleep 10
+          done
+
+          if [ "$attempt" -ge "$max_attempts" ]; then
+            echo "⚠️ Alle Versuche fehlgeschlagen – Fehler werden ins Log geschrieben, aber kein Abbruch."
+          fi
+
+      - name: 📤 Änderungen pushen (nur wenn erfolgreich)
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git diff --cached --quiet || git commit -m "Auto-Repair: JSON sync"
+          git push || echo "⚠️ Push nicht möglich (vielleicht keine Änderungen)"
+
+      - name: 🧾 Log-Ausgabe sichern
+        if: always()
+        run: |
+          echo "=== Repair JSON Log ==="
+          cat $GITHUB_WORKSPACE/scripts/*.log || echo "Keine Logdateien gefunden."
