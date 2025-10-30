@@ -1,128 +1,35 @@
-name: Fail-Safe JSON Repair + Dashboard
+name: Fail-Safe JSON Repair
 
 on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
-  json-repair-dashboard:
+  json-repair:
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
 
+    steps:
+      # 1️⃣ Repository auschecken
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      # 2️⃣ Python einrichten
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.12
+          python-version: '3.12'  # kannst du auf 3.11 ändern, wenn nötig
 
+      # 3️⃣ Abhängigkeiten installieren
       - name: Install dependencies
-        run: pip install --upgrade json5 PyGithub tabulate
+        run: |
+          python -m pip install --upgrade pip
+          pip install json5 PyGithub tabulate
 
-      - name: Fail-Safe JSON Repair + PR Dashboard
+      # 4️⃣ JSON-Reparatur Script ausführen
+      - name: Run JSON Repair Script
+        run: python scripts/repair_json.py
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          import json5, os, shutil, glob, re, subprocess
-          from github import Github
-          from tabulate import tabulate
-
-          def smart_partition_repair(content, filename):
-              repaired = content
-              logs = []
-              block_info = []
-              pattern = re.compile(r'(\{.*?\}|\[.*?\])', re.DOTALL)
-              block_counter = 0
-
-              for match in pattern.finditer(content):
-                  block = match.group(0)
-                  start, end = match.span()
-                  try:
-                      json5.loads(block)
-                      block_info.append({"block": block_counter, "start": start, "end": end,
-                                         "confidence": 1.0, "status": "OK", "subfile": ""})
-                  except Exception as e:
-                      subfile = f"{filename}_block{block_counter}.json"
-                      with open(subfile, "w", encoding="utf-8") as sf:
-                          sf.write(block)
-                      logs.append(f"Extracted faulty block to {subfile} at {start}-{end}: {str(e)}")
-                      replacement = '{}' if block.strip().startswith('{') else '[]'
-                      repaired = repaired[:start] + replacement + repaired[end:]
-                      block_info.append({"block": block_counter, "start": start, "end": end,
-                                         "confidence": 0.5, "status": "Extracted", "subfile": subfile})
-                      block_counter += 1
-
-              try:
-                  json5.loads(repaired)
-              except:
-                  logs.append("Entire file invalid, replaced with empty dict")
-                  repaired = '{}'
-                  block_info.append({"block": -1, "start": 0, "end": len(content),
-                                     "confidence": 0.2, "status": "Replaced", "subfile": ""})
-
-              return repaired, logs, block_info
-
-          branch_name = "fail-safe-json-repair-dashboard"
-          subprocess.run(["git", "checkout", "-b", branch_name], check=True)
-
-          json_files = glob.glob("**/*.json", recursive=True)
-          changed_files = []
-          dashboard_table = []
-
-          for fpath in json_files:
-              backup_path = f"{fpath}.bak"
-              if not os.path.exists(backup_path):
-                  shutil.copy(fpath, backup_path)
-
-              with open(fpath, "r", encoding="utf-8") as f:
-                  content = f.read()
-
-              iteration = 0
-              max_iterations = 5
-              while iteration < max_iterations:
-                  repaired_content, repair_logs, block_info = smart_partition_repair(content, fpath.replace("/", "_"))
-                  min_score = min(b["confidence"] for b in block_info)
-                  if repaired_content == content or min_score >= 0.8:
-                      break
-                  content = repaired_content
-                  iteration += 1
-
-              if content != open(fpath, "r", encoding="utf-8").read():
-                  with open(fpath, "w", encoding="utf-8") as f:
-                      f.write(content)
-                  changed_files.append(fpath)
-
-              for b in block_info:
-                  dashboard_table.append([fpath, b["block"], b["start"], b["end"],
-                                          b["confidence"], b["status"], b["subfile"]])
-
-          # Commit & push
-          if changed_files:
-              subprocess.run(["git", "add"] + changed_files, check=True)
-              commit_result = subprocess.run(["git", "commit", "-m", "Fail-Safe JSON Repair + Dashboard"], check=False)
-
-              if commit_result.returncode == 0:
-                  subprocess.run(["git", "push", "--set-upstream", "origin", branch_name], check=True)
-                  g = Github(os.environ["GITHUB_TOKEN"])
-                  repo = g.get_repo(os.environ["GITHUB_REPOSITORY"])
-                  pr = repo.create_pull(
-                      title="Fail-Safe JSON Repair + Dashboard",
-                      body="Automated fail-safe repair of JSON files with block-level dashboard.",
-                      head=branch_name,
-                      base="main"
-                  )
-
-                  # PR Comment: Dashboard
-                  table_str = tabulate(dashboard_table,
-                                       headers=["File", "Block", "Start", "End", "Confidence", "Status", "Subfile"],
-                                       tablefmt="github")
-                  comment_body = f"### JSON Repair Dashboard\n\n{table_str}"
-                  pr.create_issue_comment(comment_body)
-              else:
-                  print("No changes to commit")
-          else:
-              print("No files changed")
+          GITHUB_REPOSITORY: ${{ github.repository }}
