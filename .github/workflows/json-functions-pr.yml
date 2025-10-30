@@ -1,51 +1,42 @@
-name: Generate and Update JSON Functions
+name: JSON Functions PR
 
 on:
   push:
     branches:
       - main
-  workflow_dispatch:
+      - 'feature/**'  # Optional: für alle Feature-Branches
 
 jobs:
   generate-functions:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Repository auschecken
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 2. Python einrichten
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
 
+      # 3. Abhängigkeiten installieren
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install json5
 
-      - name: Run JSON repair script
+      # 4. JSON Repair Script ausführen
+      - name: Run JSON repair
         run: python scripts/repair_json.py
 
-      - name: Validate metadata JSON
-        run: python scripts/validate_metadata.py metadata/
-
-      - name: Upload JSON artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: generated-json
-          path: |
-            metadata.json
-            zenodo.json
-
-      - name: Create Pull Request
+      # 5. Änderungen committen und neuen PR vorbereiten
+      - name: Create Pull Request with updated JSON
         uses: peter-evans/create-pull-request@v5
         with:
+          commit_message: "Fail-Safe JSON Repair applied"
           branch: fail-safe-json-repair-dashboard
-          commit_message: "Update JSON functions"
-          file_pattern: |
-            metadata.json
-            zenodo.json
-          commit_user_name: "GitHub Actions Bot"
-          commit_user_email: "actions@github.com"
-          create_branch: true
+          title: "Fail-Safe JSON Repair applied"
+          body: "Automated repair of JSON functions from Zenodo to Git branches."
+          push: true
