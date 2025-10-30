@@ -1,20 +1,22 @@
-name: JSON Functions PR
+name: Update Function Branches (Token-free)
 
 on:
   push:
     branches:
       - main
-      - 'badbugsarts-hue-*'
+  workflow_dispatch:
 
 jobs:
-  generate-functions:
+  update-functions:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
@@ -22,17 +24,73 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install json5 tabulate PyGithub
+          pip install json5 tabulate
 
-      - name: Run repair_json.py
-        run: python scripts/repair_json.py
+      - name: Process functions and manage branches
+        run: |
+          python - << 'EOF'
+import json5, os, subprocess, re
+from tabulate import tabulate
 
-      - name: Create or update Pull Request
-        uses: peter-evans/create-pull-request@v5
+# Lade Daten
+with open("zenodo.json", "r") as f:
+    data = json5.load(f)
+
+dashboard = []
+
+# Hilfsfunktionen
+def get_existing_branches():
+    result = subprocess.run(["git", "branch", "-r"], capture_output=True, text=True)
+    branches = [b.strip().replace("origin/", "") for b in result.stdout.splitlines()]
+    return branches
+
+def archive_branch(branch_name):
+    archived_name = branch_name + "-archived"
+    subprocess.run(["git", "checkout", "main"])
+    subprocess.run(["git", "branch", "-m", branch_name, archived_name])
+    subprocess.run(["git", "push", "origin", f"{archived_name}:{archived_name}"])
+    subprocess.run(["git", "push", "origin", "--delete", branch_name])
+
+def create_new_version_branch(func, version):
+    name_clean = func["name"].replace(" ", "-").lower()
+    branch_name = f"func-{name_clean}-v{version}"
+    subprocess.run(["git", "checkout", "-b", branch_name])
+    os.makedirs("functions", exist_ok=True)
+    filename = f"functions/{name_clean}.json"
+    json5.dump({"workExample": [func]}, open(filename, "w"), indent=2)
+    subprocess.run(["git", "add", filename])
+    subprocess.run(["git", "commit", "-m", f"Add function {func['name']} v{version}"])
+    subprocess.run(["git", "push", "-u", "origin", branch_name])
+    return branch_name
+
+# Bestehende Branches prüfen
+existing_branches = get_existing_branches()
+
+# Branches pro Funktion erzeugen
+for func in data.get("workExample", []):
+    name_clean = func["name"].replace(" ", "-").lower()
+    prefix = f"func-{name_clean}-v"
+    # Prüfe aktuelle Version
+    versions = [int(re.search(r'v(\d+)', b).group(1)) for b in existing_branches if b.startswith(prefix) and "-archived" not in b]
+    latest_version = max(versions) if versions else 0
+    # Alte Branch archivieren
+    for b in existing_branches:
+        if b.startswith(prefix) and "-archived" not in b:
+            archive_branch(b)
+    # Neue Branch erzeugen
+    new_version = latest_version + 1
+    branch_name = create_new_version_branch(func, new_version)
+    dashboard.append({"Function": func["name"], "Branch": branch_name, "Version": new_version})
+
+# Dashboard speichern
+os.makedirs("dashboard", exist_ok=True)
+json5.dump(dashboard, open("dashboard/functions-dashboard.json", "w"), indent=2)
+print("\n==== FUNCTIONS DASHBOARD ====\n")
+print(tabulate(dashboard, headers="keys", tablefmt="github"))
+EOF
+
+      - name: Upload dashboard as artifact
+        uses: actions/upload-artifact@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: fail-safe-json-repair-dashboard
-          commit-message: "Update JSON functions"
-          title: "Automatic JSON Functions Update"
-          body: "This PR updates the JSON functions from the project repo."
-          labels: "automation,json-update"
+          name: functions-dashboard
+          path: dashboard/functions-dashboard.json
