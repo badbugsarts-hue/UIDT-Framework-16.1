@@ -1,4 +1,4 @@
-name: Update Function Branches (Token-free)
+name: Update Function Branches with PRs (Token-free)
 
 on:
   push:
@@ -26,7 +26,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install json5 tabulate
 
-      - name: Process functions and manage branches
+      - name: Install GitHub CLI
+        run: |
+          sudo apt update
+          sudo apt install gh -y
+          gh auth status || gh auth login --web
+
+      - name: Process functions and manage branches + PRs
         run: |
           python - << 'EOF'
 import json5, os, subprocess, re
@@ -63,6 +69,20 @@ def create_new_version_branch(func, version):
     subprocess.run(["git", "push", "-u", "origin", branch_name])
     return branch_name
 
+def create_pr(branch_name, func_name, version):
+    # Prüfen, ob PR existiert
+    result = subprocess.run(["gh", "pr", "list", "--head", branch_name], capture_output=True, text=True)
+    if result.stdout.strip() == "":
+        subprocess.run([
+            "gh", "pr", "create",
+            "--title", f"Add function {func_name} v{version}",
+            "--body", f"Automated PR for function {func_name} version v{version} from zenodo.json",
+            "--base", "main",
+            "--head", branch_name
+        ])
+        return True
+    return False
+
 # Bestehende Branches prüfen
 existing_branches = get_existing_branches()
 
@@ -70,7 +90,6 @@ existing_branches = get_existing_branches()
 for func in data.get("workExample", []):
     name_clean = func["name"].replace(" ", "-").lower()
     prefix = f"func-{name_clean}-v"
-    # Prüfe aktuelle Version
     versions = [int(re.search(r'v(\d+)', b).group(1)) for b in existing_branches if b.startswith(prefix) and "-archived" not in b]
     latest_version = max(versions) if versions else 0
     # Alte Branch archivieren
@@ -80,7 +99,13 @@ for func in data.get("workExample", []):
     # Neue Branch erzeugen
     new_version = latest_version + 1
     branch_name = create_new_version_branch(func, new_version)
-    dashboard.append({"Function": func["name"], "Branch": branch_name, "Version": new_version})
+    pr_created = create_pr(branch_name, func["name"], new_version)
+    dashboard.append({
+        "Function": func["name"],
+        "Branch": branch_name,
+        "Version": new_version,
+        "PR Created": pr_created
+    })
 
 # Dashboard speichern
 os.makedirs("dashboard", exist_ok=True)
