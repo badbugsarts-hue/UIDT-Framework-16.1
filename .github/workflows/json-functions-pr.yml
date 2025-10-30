@@ -1,46 +1,9 @@
-name: Update Function Branches with Versioning
-
-on:
-  push:
-    branches:
-      - main
-
-jobs:
-  update-functions:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
-
-      - name: Setup Git
-        run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install json5 tabulate PyGithub
-
       - name: Process functions with versioning and archiving
         run: |
           python - << 'EOF'
           import json5, os, subprocess, re
-          from github import Github
-          from tabulate import tabulate
 
-          token = os.environ["GITHUB_TOKEN"]
-          repo_name = os.environ["GITHUB_REPOSITORY"]
-          g = Github(token)
-          repo = g.get_repo(repo_name)
+          repo_dir = os.getcwd()
 
           with open("zenodo.json", "r") as f:
               data = json5.load(f)
@@ -48,7 +11,8 @@ jobs:
           dashboard = []
 
           def get_latest_version(func_name):
-              branches = [b.name for b in repo.get_branches()]
+              branches = subprocess.check_output(["git", "branch", "-r"]).decode().splitlines()
+              branches = [b.strip().replace("origin/", "") for b in branches]
               prefix = f"func-{func_name}-v"
               version_branches = [b for b in branches if b.startswith(prefix) and '-archived' not in b]
               if not version_branches:
@@ -83,32 +47,16 @@ jobs:
               if latest_branch:
                   archive_branch(latest_branch)
               new_branch, new_version = create_new_version_branch(func, latest_version)
-              pulls = repo.get_pulls(state='open', head=f"{repo.owner.login}:{new_branch}")
-              if pulls.totalCount == 0:
-                  pr = repo.create_pull(
-                      title=f"Add function {func['name']} v{new_version}",
-                      body=f"Automated PR for function {func['name']} version v{new_version} from zenodo.json",
-                      head=new_branch,
-                      base="main"
-                  )
-              else:
-                  pr = pulls[0]
               dashboard.append({
                   "Function": func["name"],
                   "Branch": new_branch,
                   "Version": new_version,
-                  "Archived": latest_branch if latest_branch else None,
-                  "PR Open": pr.html_url
+                  "Archived": latest_branch if latest_branch else None
               })
 
           os.makedirs("dashboard", exist_ok=True)
           json5.dump(dashboard, open("dashboard/functions-dashboard.json", "w"), indent=2)
           print("\n\n==== FUNCTIONS DASHBOARD ====\n")
+          from tabulate import tabulate
           print(tabulate(dashboard, headers="keys", tablefmt="github"))
           EOF
-
-      - name: Upload dashboard as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: functions-dashboard
-          path: dashboard/functions-dashboard.json
