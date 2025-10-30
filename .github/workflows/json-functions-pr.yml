@@ -11,27 +11,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout the repo
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Setup Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
 
-      # Install required Python packages
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install json5 tabulate PyGithub
 
-      # Run JSON repair script
       - name: Run repair_json.py
         run: python scripts/repair_json.py
 
-      # Create or update Pull Request
       - name: Create or update Pull Request
         uses: peter-evans/create-pull-request@v5
         with:
@@ -41,4 +36,3 @@ jobs:
           title: "Automatic JSON Functions Update"
           body: "This PR updates the JSON functions from the project repo."
           labels: "automation,json-update"
-          reviewers: ""p
