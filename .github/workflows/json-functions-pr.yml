@@ -1,78 +1,33 @@
-name: JSON Repair & Function Export PR
+name: Generate Functions PR
 
 on:
   push:
-    paths:
-      - 'metadata/**'
-      - 'scripts/**'
-      - 'uidt/**'
-  workflow_dispatch:  # erlaubt manuelles Ausführen im GitHub-UI
+    branches:
+      - main
+      - "feature/**"
 
 jobs:
-  repair-export-pr:
+  generate-functions:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
+          python-version: "3.11"
 
       - name: Install dependencies
-        run: python -m pip install --upgrade pip
+        run: pip install -r requirements.txt || echo "No dependencies"
 
-      - name: Validate metadata
-        run: python scripts/validate_metadata.py metadata/
+      - name: Generate Python modules from zenodo.json
+        run: python scripts/generate_functions.py
 
-      - name: Repair JSON
-        run: python scripts/repair_json.py
-
-      - name: Export all functions to JSON
-        run: |
-          python - <<'EOF'
-          import json
-          from scripts.export_functions import export_functions_to_json_list
-
-          with open("zenodo.json", "r") as f:
-              data = json.load(f)
-
-          data["functions"] = export_functions_to_json_list("uidt")
-
-          with open("zenodo.json", "w") as f:
-              json.dump(data, f, indent=2)
-          EOF
-
-      - name: Configure Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Commit JSON changes
-        run: |
-          git checkout -B fail-safe-json-repair-dashboard
-          git add zenodo.json metadata.json
-          git commit -m "Automated JSON repair & function export" || echo "No changes to commit"
-
-      - name: Push branch
-        run: |
-          git push https://x-access-token:${{ secrets.GH_PAT }}@github.com/${{ github.repository }} fail-safe-json-repair-dashboard --force
-
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v5
+      - name: Commit generated modules
+        uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          token: ${{ secrets.GH_PAT }}
+          commit_message: "Auto-generate Python modules from zenodo.json"
           branch: fail-safe-json-repair-dashboard
-          title: "Fail-Safe JSON Repair + Function Export"
-          body: "Automated repair of metadata and zenodo JSON files, with all functions exported."
-          base: main
-
-      - name: Upload JSON artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: repaired-json-and-functions
-          path: |
-            zenodo.json
-            metadata.json
+          push: true
