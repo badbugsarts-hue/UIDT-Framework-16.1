@@ -1,4 +1,4 @@
-name: Update Function Branches with PRs (Token-free)
+name: Update Function Branches with Versioning
 
 on:
   push:
@@ -21,90 +21,90 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Setup Git
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install json5 tabulate
+          pip install json5 tabulate PyGithub
 
-      - name: Install GitHub CLI
+      - name: Process functions with versioning and archiving
         run: |
-          sudo apt update
-          sudo apt install gh -y
-          gh auth status || gh auth login --web
-
-      - name: Process functions and manage branches + PRs
-        shell: bash
-        run: |
-          python <<'EOF'
+          python - << 'EOF'
 import json5, os, subprocess, re
+from github import Github
 from tabulate import tabulate
 
-# Load zenodo.json with all functions
+token = os.environ["GITHUB_TOKEN"]
+repo_name = os.environ["GITHUB_REPOSITORY"]
+g = Github(token)
+repo = g.get_repo(repo_name)
+
 with open("zenodo.json", "r") as f:
     data = json5.load(f)
 
 dashboard = []
 
-def get_existing_branches():
-    result = subprocess.run(["git", "branch", "-r"], capture_output=True, text=True)
-    branches = [b.strip().replace("origin/", "") for b in result.stdout.splitlines()]
-    return branches
+def get_latest_version(func_name):
+    branches = [b.name for b in repo.get_branches()]
+    prefix = f"func-{func_name}-v"
+    version_branches = [b for b in branches if b.startswith(prefix) and '-archived' not in b]
+    if not version_branches:
+        return None, 0
+    versions = [int(re.search(r'v(\d+)', b).group(1)) for b in version_branches]
+    latest_version = max(versions)
+    latest_branch = [b for b in version_branches if f"v{latest_version}" in b][0]
+    return latest_branch, latest_version
 
 def archive_branch(branch_name):
     archived_name = branch_name + "-archived"
-    subprocess.run(["git", "checkout", "main"])
     subprocess.run(["git", "branch", "-m", branch_name, archived_name])
-    subprocess.run(["git", "push", "origin", f"{archived_name}:{archived_name}"])
+    subprocess.run(["git", "push", "origin", f'{archived_name}:{archived_name}'])
     subprocess.run(["git", "push", "origin", "--delete", branch_name])
 
-def create_new_version_branch(func, version):
+def create_new_version_branch(func, latest_version):
     name_clean = func["name"].replace(" ", "-").lower()
-    branch_name = f"func-{name_clean}-v{version}"
+    new_version = latest_version + 1
+    branch_name = f"func-{name_clean}-v{new_version}"
     subprocess.run(["git", "checkout", "-b", branch_name])
     os.makedirs("functions", exist_ok=True)
     filename = f"functions/{name_clean}.json"
     json5.dump({"workExample": [func]}, open(filename, "w"), indent=2)
     subprocess.run(["git", "add", filename])
-    subprocess.run(["git", "commit", "-m", f"Add function {func['name']} v{version}"])
+    subprocess.run(["git", "commit", "-m", f"Add function {func['name']} version v{new_version}"])
     subprocess.run(["git", "push", "-u", "origin", branch_name])
-    return branch_name
-
-def create_pr(branch_name, func_name, version):
-    result = subprocess.run(["gh", "pr", "list", "--head", branch_name], capture_output=True, text=True)
-    if result.stdout.strip() == "":
-        subprocess.run([
-            "gh", "pr", "create",
-            "--title", f"Add function {func_name} v{version}",
-            "--body", f"Automated PR for function {func_name} version v{version} from zenodo.json",
-            "--base", "main",
-            "--head", branch_name
-        ])
-        return True
-    return False
-
-existing_branches = get_existing_branches()
+    return branch_name, new_version
 
 for func in data.get("workExample", []):
     name_clean = func["name"].replace(" ", "-").lower()
-    prefix = f"func-{name_clean}-v"
-    versions = [int(re.search(r'v(\d+)', b).group(1)) for b in existing_branches if b.startswith(prefix) and "-archived" not in b]
-    latest_version = max(versions) if versions else 0
-    for b in existing_branches:
-        if b.startswith(prefix) and "-archived" not in b:
-            archive_branch(b)
-    new_version = latest_version + 1
-    branch_name = create_new_version_branch(func, new_version)
-    pr_created = create_pr(branch_name, func["name"], new_version)
+    latest_branch, latest_version = get_latest_version(name_clean)
+    if latest_branch:
+        archive_branch(latest_branch)
+    new_branch, new_version = create_new_version_branch(func, latest_version)
+    pulls = repo.get_pulls(state='open', head=f"{repo.owner.login}:{new_branch}")
+    if pulls.totalCount == 0:
+        pr = repo.create_pull(
+            title=f"Add function {func['name']} v{new_version}",
+            body=f"Automated PR for function {func['name']} version v{new_version} from zenodo.json",
+            head=new_branch,
+            base="main"
+        )
+    else:
+        pr = pulls[0]
     dashboard.append({
         "Function": func["name"],
-        "Branch": branch_name,
+        "Branch": new_branch,
         "Version": new_version,
-        "PR Created": pr_created
+        "Archived": latest_branch if latest_branch else None,
+        "PR Open": pr.html_url
     })
 
 os.makedirs("dashboard", exist_ok=True)
 json5.dump(dashboard, open("dashboard/functions-dashboard.json", "w"), indent=2)
-print("\n==== FUNCTIONS DASHBOARD ====\n")
+print("\n\n==== FUNCTIONS DASHBOARD ====\n")
 print(tabulate(dashboard, headers="keys", tablefmt="github"))
 EOF
 
