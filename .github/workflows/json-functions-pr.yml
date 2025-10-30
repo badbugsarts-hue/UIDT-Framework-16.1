@@ -1,93 +1,88 @@
 name: Update Function Branches with Versioning
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:  # Manuelles Ausführen möglich
 
 jobs:
   update-functions:
     runs-on: ubuntu-latest
 
     steps:
+      # Repository auschecken
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      # Python einrichten
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
 
+      # Git konfigurieren
+      - name: Setup Git
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+      # Abhängigkeiten installieren
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install json5 tabulate
+          python -m pip install json5 tabulate
 
-      - name: Process functions with versioning and archiving
+      # Test imports
+      - name: Test Python modules
+        run: |
+          python -c "import json5; import tabulate; print('Modules loaded successfully')"
+
+      # Funktionen verarbeiten und Versionen erstellen
+      - name: Process functions with versioning
         run: |
           python - << 'EOF'
 import json5, os, subprocess, re
 from tabulate import tabulate
 
-# Pfad zur Zenodo JSON
 ZENODO_FILE = "zenodo.json"
+
+if not os.path.exists(ZENODO_FILE):
+    print(f"ERROR: {ZENODO_FILE} not found in repo root!")
+    exit(1)
 
 with open(ZENODO_FILE, "r") as f:
     data = json5.load(f)
 
 dashboard = []
 
-def get_latest_version(func_name):
-    branches = subprocess.check_output(["git", "branch", "-r"], text=True).splitlines()
-    prefix = f"origin/func-{func_name}-v"
-    version_branches = [b.strip().replace("origin/", "") for b in branches if b.strip().startswith(prefix) and '-archived' not in b]
-    if not version_branches:
-        return None, 0
-    versions = [int(re.search(r'v(\d+)', b).group(1)) for b in version_branches]
-    latest_version = max(versions)
-    latest_branch = [b for b in version_branches if f"v{latest_version}" in b][0]
-    return latest_branch, latest_version
+def sanitize_name(name):
+    return name.replace(" ", "-").lower()
 
-def archive_branch(branch_name):
-    archived_name = branch_name + "-archived"
-    subprocess.run(["git", "branch", "-m", branch_name, archived_name], check=True)
-    subprocess.run(["git", "push", "origin", f'{archived_name}:{archived_name}'], check=True)
-    subprocess.run(["git", "push", "origin", "--delete", branch_name], check=True)
-
-def create_new_version_branch(func, latest_version):
-    name_clean = func["name"].replace(" ", "-").lower()
-    new_version = latest_version + 1
-    branch_name = f"func-{name_clean}-v{new_version}"
-    subprocess.run(["git", "checkout", "-b", branch_name], check=True)
+def create_branch_and_file(func, version):
+    branch_name = f"func-{sanitize_name(func['name'])}-v{version}"
+    subprocess.run(["git", "checkout", "-b", branch_name])
     os.makedirs("functions", exist_ok=True)
-    filename = f"functions/{name_clean}.json"
+    filename = f"functions/{sanitize_name(func['name'])}.json"
     json5.dump({"workExample": [func]}, open(filename, "w"), indent=2)
-    subprocess.run(["git", "add", filename], check=True)
-    subprocess.run(["git", "commit", "-m", f"Add function {func['name']} version v{new_version}"], check=True)
-    subprocess.run(["git", "push", "-u", "origin", branch_name], check=True)
-    return branch_name, new_version
+    subprocess.run(["git", "add", filename])
+    subprocess.run(["git", "commit", "-m", f"Add function {func['name']} v{version}"])
+    subprocess.run(["git", "push", "-u", "origin", branch_name])
+    return branch_name
 
-for func in data.get("workExample", []):
-    name_clean = func["name"].replace(" ", "-").lower()
-    latest_branch, latest_version = get_latest_version(name_clean)
-    if latest_branch:
-        archive_branch(latest_branch)
-    new_branch, new_version = create_new_version_branch(func, latest_version)
-    dashboard.append({
-        "Function": func["name"],
-        "Branch": new_branch,
-        "Version": new_version,
-        "Archived": latest_branch if latest_branch else None
-    })
+for idx, func in enumerate(data.get("workExample", []), 1):
+    branch = create_branch_and_file(func, idx)
+    dashboard.append({"Function": func["name"], "Branch": branch, "Version": idx})
 
+# Dashboard lokal speichern
 os.makedirs("dashboard", exist_ok=True)
 json5.dump(dashboard, open("dashboard/functions-dashboard.json", "w"), indent=2)
+
+# Tabelle ausgeben
 print("\n\n==== FUNCTIONS DASHBOARD ====\n")
 print(tabulate(dashboard, headers="keys", tablefmt="github"))
 EOF
 
+      # Dashboard hochladen
       - name: Upload dashboard as artifact
         uses: actions/upload-artifact@v4
         with:
