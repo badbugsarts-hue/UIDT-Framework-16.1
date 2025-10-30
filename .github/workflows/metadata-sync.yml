@@ -1,6 +1,5 @@
 name: Metadata Validation & Repair
 
-# Trigger: Immer bei Änderungen an metadata/ oder Skripten
 on:
   push:
     paths:
@@ -39,3 +38,11 @@ jobs:
     # 5. JSON reparieren
     - name: Run repair_json.py
       run: python scripts/repair_json.py
+
+    # 6. Ergebnisse als Artifacts speichern (optional, Download möglich)
+    - name: Upload JSON artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: repaired-json
+        path: |
+          zenodo.json_block*.json
