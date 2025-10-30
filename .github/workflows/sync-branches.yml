@@ -1,1 +1,36 @@
+name: Sync zenodo.json across branches
 
+on:
+  push:
+    paths:
+      - 'zenodo.json'
+
+jobs:
+  sync-branches:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history needed for branch operations
+
+      - name: Setup Git
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+      - name: List all branches
+        id: branches
+        run: |
+          echo "::set-output name=all::$(git for-each-ref --format='%(refname:short)' refs/heads/)"
+
+      - name: Sync zenodo.json to all branches
+        run: |
+          for branch in $(echo "${{ steps.branches.outputs.all }}"); do
+            if [ "$branch" != "main" ]; then
+              git checkout $branch
+              git merge origin/main --no-edit || true
+              git push origin $branch
+            fi
+          done
