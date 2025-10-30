@@ -103,7 +103,8 @@ if changed_files:
         pr.create_issue_comment(f"### JSON Repair Dashboard\n\n{table_str}")
 
 else:
-    print("No files changed")
-    with open("repair_log.log", "w", encoding="utf-8") as log_file:
+   with open("somefile.txt") as f:
+    logs = f.readlines()  # ✅ 4 Leerzeichen eingerückt
     for line in logs:
-        log_file.write(line + "\n")
+        print(line)  # oder dein weiterer Code
+        print(line)
