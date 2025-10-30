@@ -4,39 +4,43 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:   # erlaubt manuelles Starten
+  workflow_dispatch:   # manuell starten
 
 jobs:
   repair-json:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Repo auschecken
+      # 1️⃣ Repository auschecken
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Python einrichten
+      # 2️⃣ Python-Umgebung einrichten
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
 
-      # 3. Abhängigkeiten installieren
+      # 3️⃣ Abhängigkeiten installieren
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install json5 tabulate PyGithub
 
-      # 4. Script ausführen
+      # 4️⃣ JSON-Reparatur ausführen
       - name: Run repair_json.py
         run: python scripts/repair_json.py
 
-      # 5. Änderungen committen und PR erstellen
+      # 5️⃣ Änderungen committen & Pull Request erstellen
       - name: Commit & Create PR
         uses: peter-evans/create-pull-request@v5
         with:
-          commit_message: "Fail-Safe JSON Repair applied"
+          token: ${{ secrets.GITHUB_TOKEN }}
           branch: fail-safe-json-repair-dashboard
+          base: main
           title: "Fail-Safe JSON Repair"
           body: "Automated JSON repair applied via workflow."
-          base: main
+          commit-message: "Fail-Safe JSON Repair applied"
+          labels: |
+            automated
+            json-repair
