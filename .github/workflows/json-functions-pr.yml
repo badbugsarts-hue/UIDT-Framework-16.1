@@ -4,14 +4,14 @@ on:
   push:
     branches:
       - main
-      - 'feature/**'  # Optional: für alle Feature-Branches
+  workflow_dispatch:   # erlaubt manuelles Starten
 
 jobs:
-  generate-functions:
+  repair-json:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Repository auschecken
+      # 1. Repo auschecken
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -25,18 +25,18 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install json5
+          pip install json5 tabulate
 
-      # 4. JSON Repair Script ausführen
-      - name: Run JSON repair
+      # 4. Script ausführen
+      - name: Run repair_json.py
         run: python scripts/repair_json.py
 
-      # 5. Änderungen committen und neuen PR vorbereiten
-      - name: Create Pull Request with updated JSON
+      # 5. Änderungen committen und PR erstellen
+      - name: Commit & Create PR
         uses: peter-evans/create-pull-request@v5
         with:
           commit_message: "Fail-Safe JSON Repair applied"
           branch: fail-safe-json-repair-dashboard
-          title: "Fail-Safe JSON Repair applied"
-          body: "Automated repair of JSON functions from Zenodo to Git branches."
-          push: true
+          title: "Fail-Safe JSON Repair"
+          body: "Automated JSON repair applied via workflow."
+          base: main
