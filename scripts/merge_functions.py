@@ -3,13 +3,12 @@ import json
 import os
 import subprocess
 
-# Verzeichnis mit Branches angeben, falls lokal geklont
+# Alle Remote-Branches abrufen
 branches = subprocess.check_output(["git", "branch", "-r"]).decode().splitlines()
 branches = [b.strip().replace("origin/", "") for b in branches if "HEAD" not in b]
 
 merged_functions = {}
 
-# Funktionen von allen Branches auslesen
 for branch in branches:
     subprocess.run(["git", "checkout", branch])
     if not os.path.exists("zenodo.json"):
@@ -21,14 +20,12 @@ for branch in branches:
             if name not in merged_functions:
                 merged_functions[name] = func
             else:
-                # Bei Konflikt: Code aus main priorisieren
                 merged_functions[name]["code"] = merged_functions[name].get("code", func.get("code"))
 
-# Haupt-JSON aktualisieren
+# Merge in zenodo.json auf main
 with open("zenodo.json", "w") as f:
     json.dump({"functions": list(merged_functions.values())}, f, indent=2)
 
-print(f"Merged {len(merged_functions)} unique functions from {len(branches)} branches.")
+print(f"Merged {len(merged_functions)} functions from {len(branches)} branches.")
 
-# Branch main zurückschalten
 subprocess.run(["git", "checkout", "main"])
