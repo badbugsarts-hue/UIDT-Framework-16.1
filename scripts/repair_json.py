@@ -103,7 +103,8 @@ if changed_files:
         pr.create_issue_comment(f"### JSON Repair Dashboard\n\n{table_str}")
 
 else:
-    print("No files changed")
-    with open(subfile, "w", encoding="utf-8") as sf:
+    with open("logs.txt") as f:
+    logs = f.readlines()
     for line in logs:
-        logs.append(f"Extracted faulty block to {subfile}")
+        # Hier kommt dein Code
+        print(line)
