@@ -1,10 +1,10 @@
-name: Generate Functions PR
+name: Generate and Update JSON Functions
 
 on:
   push:
     branches:
       - main
-      - "feature/**"
+  workflow_dispatch:
 
 jobs:
   generate-functions:
@@ -20,14 +20,32 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install -r requirements.txt || echo "No dependencies"
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      - name: Generate Python modules from zenodo.json
-        run: python scripts/generate_functions.py
+      - name: Run JSON repair script
+        run: python scripts/repair_json.py
 
-      - name: Commit generated modules
-        uses: stefanzweifel/git-auto-commit-action@v5
+      - name: Validate metadata JSON
+        run: python scripts/validate_metadata.py metadata/
+
+      - name: Upload JSON artifacts
+        uses: actions/upload-artifact@v4
         with:
-          commit_message: "Auto-generate Python modules from zenodo.json"
+          name: generated-json
+          path: |
+            metadata.json
+            zenodo.json
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
           branch: fail-safe-json-repair-dashboard
-          push: true
+          commit_message: "Update JSON functions"
+          file_pattern: |
+            metadata.json
+            zenodo.json
+          commit_user_name: "GitHub Actions Bot"
+          commit_user_email: "actions@github.com"
+          create_branch: true
