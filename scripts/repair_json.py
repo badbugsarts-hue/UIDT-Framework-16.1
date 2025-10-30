@@ -103,8 +103,8 @@ if changed_files:
         pr.create_issue_comment(f"### JSON Repair Dashboard\n\n{table_str}")
 
 else:
-    with open("logs.txt") as f:
-    logs = f.readlines()
+   with open("somefile.txt") as f:
+    logs = f.readlines()  # ✅ 4 Leerzeichen eingerückt
     for line in logs:
-        # Hier kommt dein Code
+        print(line)  # oder dein weiterer Code
         print(line)
