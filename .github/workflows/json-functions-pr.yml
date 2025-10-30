@@ -16,8 +16,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-
+          fetch-depth: badbugsarts-hue-patch-2
       # Optional: Python einrichten, falls Scripts laufen müssen
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -36,8 +35,36 @@ jobs:
         with:
           branch: fail-safe-json-repair-dashboard
           commit_message: "Update JSON functions"
-          file_pattern: |
+          file_pattern: 
             metadata.json
             zenodo.json
           commit_user_name: "GitHub Actions Bot"
-          commit_user_email: "actions@github.com"
+          commit_user_email: "actions@github.
+      # 2️⃣ Python-Umgebung einrichten
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      # 3️⃣ Abhängigkeiten installieren
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install json5 tabulate PyGithub
+
+      # 4️⃣ JSON-Reparatur ausführen
+      - name: Run repair_json.py
+        run: python scripts/repair_json.py
+
+      # 5️⃣ Änderungen committen & Pull Request erstellen
+      - name: Commit & Create PR
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: fail-safe-json-repair-dashboard
+          base: main
+          title: "Fail-Safe JSON Repair"
+          body: "Automated JSON repair applied via workflow."
+          commit-message: "Fail-Safe JSON Repair applied"
+          labels: automated
+            json-repair main
