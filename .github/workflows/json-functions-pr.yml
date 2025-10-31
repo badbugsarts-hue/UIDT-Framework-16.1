@@ -89,4 +89,86 @@ for idx, func in enumerate(work_examples, 1):
 
         # --- Neuen Branch erstellen ---
         print(f"  Creating branch: {branch_name}")
-        subprocess.run(["git", "checkout", "-b", branch_name], check=True, capture
+        subprocess.run(["git", "checkout", "-b", branch_name], check=True, capture_output=True)
+
+        # --- Datei schreiben ---
+        os.makedirs("functions", exist_ok=True)
+        with open(filename, "w", encoding="utf-8") as f:
+            json5.dump({"workExample": [func]}, f, indent=2, quote_keys=True)
+        print(f"  Created: {filename}")
+
+        # --- Commit ---
+        subprocess.run(["git", "add", filename], check=True)
+        commit_msg = f"feat: add function {func_name} v{idx}"
+        subprocess.run(["git", "commit", "-m", commit_msg], check=True)
+        print(f"  Committed: {commit_msg}")
+
+        # --- Push mit Fehlerbehandlung ---
+        push_result = subprocess.run(
+            ["git", "push", "-u", "origin", branch_name],
+            capture_output=True, text=True
+        )
+        if push_result.returncode != 0:
+            error_msg = push_result.stderr.strip()
+            if "remote: error: GH006" in error_msg or "already exists" in error_msg:
+                print(f"  Branch {branch_name} already exists. Forcing push...")
+                subprocess.run(["git", "push", "--force-with-lease", "origin", branch_name], check=True)
+            else:
+                raise subprocess.CalledProcessError(push_result.returncode, "git push", output=push_result.stdout, stderr=error_msg)
+
+        print(f"  Successfully pushed: {branch_name}")
+        dashboard.append({"Function": func_name, "Branch": branch_name, "Version": idx, "File": filename})
+
+    except Exception as e:
+        print(f"  FAILED to process {branch_name}: {e}")
+        # Branch bereinigen, falls teilweise erstellt
+        try:
+            subprocess.run(["git", "checkout", original_branch], check=True, capture_output=True)
+            subprocess.run(["git", "branch", "-D", branch_name], capture_output=True, check=True)
+        except:
+            pass
+        # Weiter mit nächster Funktion
+        continue
+
+# === 6. Zurück zum Original-Branch ===
+print(f"\nReturning to original branch: {original_branch}")
+try:
+    subprocess.run(["git", "checkout", original_branch], check=True, capture_output=True)
+    subprocess.run(["git", "reset", "--hard", original_commit], check=True, capture_output=True)
+    subprocess.run(["git", "clean", "-fd"], check=True, capture_output=True)
+except subprocess.CalledProcessError as e:
+    print(f"Warning: Could not fully restore original branch: {e.stderr.decode()}")
+
+# === 7. Dashboard speichern ===
+print("\nCreating dashboard...")
+os.makedirs("dashboard", exist_ok=True)
+dashboard_file = "dashboard/functions-dashboard.json"
+with open(dashboard_file, "w", encoding="utf-8") as f:
+    json5.dump(dashboard, f, indent=2, quote_keys=True)
+
+# === 8. Dashboard ausgeben ===
+print("\n" + "="*50)
+print(" FUNCTIONS DASHBOARD")
+print("="*50)
+if dashboard:
+    print(tabulate(dashboard, headers="keys", tablefmt="github"))
+else:
+    print("No functions were successfully processed.")
+print(f"\nDashboard saved to: {dashboard_file}")
+EOF
+
+      # Dashboard als Artifact hochladen
+      - name: Upload dashboard artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: functions-dashboard
+          path: dashboard/functions-dashboard.json
+
+      # Dashboard ins Haupt-Repo committen (optional, aber nützlich)
+      - name: Commit and push dashboard to main branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dashboard/functions-dashboard.json
+          git commit -m "chore: update functions dashboard" || echo "No changes to commit"
+          git push origin HEAD:${{ github.ref_name }} || echo "No push needed"
