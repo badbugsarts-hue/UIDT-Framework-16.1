@@ -41,7 +41,7 @@ jobs:
 
     # 6. Ergebnisse als Artifacts speichern (optional, Download möglich)
     - name: Upload JSON artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@4
       with:
         name: repaired-json
         path: |
