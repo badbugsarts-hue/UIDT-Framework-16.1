@@ -17,7 +17,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Wichtig, um den Verlauf für das Branching zu haben
+          fetch-depth: 0
 
       # Python einrichten
       - name: Setup Python
