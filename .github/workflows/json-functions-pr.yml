@@ -123,7 +123,7 @@ try:
             branch_name = "func-{}-v{}".format(safe_name, idx)
             filename = "functions/{}.json".format(safe_name)
 
-            print("Processing [{}/{}]: {} → {}".format(idx, len(work_examples), func_name, branch_name))
+            print("Processing [{}/{}]: {} to {}".format(idx, len(work_examples), func_name, branch_name))
 
             # --- Zurück auf sauberen Start-Commit ---
             print("  Resetting to clean commit {}...".format(original_commit[:8]))
