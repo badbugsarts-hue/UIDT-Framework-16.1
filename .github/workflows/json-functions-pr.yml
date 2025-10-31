@@ -1,39 +1,31 @@
 name: Update Function Branches
 
-# Trigger manuell
 on:
   workflow_dispatch:
 
 jobs:
   update-functions:
     runs-on: ubuntu-latest
-
-    # Berechtigungen: Schreibrechte für Branches und Commits
     permissions:
       contents: write
 
     steps:
-      # Repository auschecken (vollständiger Verlauf nötig)
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # Python einrichten
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
 
-      # Abhängigkeiten installieren
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install json5 tabulate
 
-      # Funktionen verarbeiten und Branches erstellen
       - name: Process functions and create branches
-        continue-on-error: true  # Fortfahren, auch bei Fehlern in diesem Step
         run: |
           python - <<'EOF'
 import json5
@@ -42,208 +34,113 @@ import subprocess
 import sys
 from tabulate import tabulate
 
-def run_git_command(cmd, check=True, capture_output=True, text=True):
-    """Helper to run git commands safely."""
+def git(cmd, check=True):
     try:
-        result = subprocess.run(cmd, check=check, capture_output=capture_output, text=text, timeout=300)  # 5 Min Timeout pro Git-Command
-        return result
-    except subprocess.TimeoutExpired as e:
-        print("Git command timed out: " + " ".join(cmd))
-        print("Error: " + str(e))
-        if check:
-            raise
-        return e
+        result = subprocess.run(cmd, capture_output=True, text=True, check=check, timeout=300)
+        return result.stdout.strip()
     except subprocess.CalledProcessError as e:
-        print("Git command failed: " + " ".join(cmd))
-        print("Error: " + str(e))
-        if e.stdout:
-            print("STDOUT: " + e.stdout)
-        if e.stderr:
-            print("STDERR: " + e.stderr)
+        print(f"Git failed: {' '.join(cmd)}\n{e.stderr}")
         if check:
             raise
-        return e
-    except Exception as e:
-        print("Unexpected error in git command: " + " ".join(cmd))
-        print("Error: " + str(e))
-        if check:
-            raise
-        return None
+        return ""
 
-# Haupt-Execution in try wrappen, um Abstürze zu vermeiden
+# --- Hauptlogik ---
 try:
-    # === 1. Prüfen: JSON-Datei vorhanden? ===
-    json_file = "zenodo.json"
-    if not os.path.exists(json_file):
-        print("ERROR: {} not found in repository root!".format(json_file))
-        raise FileNotFoundError("Missing zenodo.json")
+    if not os.path.exists("zenodo.json"):
+        print("ERROR: zenodo.json not found!")
+        sys.exit(1)
 
-    # === 2. JSON laden ===
-    try:
-        with open(json_file, "r", encoding="utf-8") as f:
-            data = json5.load(f)
-    except Exception as e:
-        print("Error loading {}: {}".format(json_file, e))
-        raise
+    with open("zenodo.json", "r", encoding="utf-8") as f:
+        data = json5.load(f)
 
-    # === 3. Ursprünglichen Zustand sichern ===
-    try:
-        original_branch_result = run_git_command(["git", "rev-parse", "--abbrev-ref", "HEAD"])
-        if original_branch_result.returncode != 0:
-            raise ValueError("Failed to get original branch")
-        original_branch = original_branch_result.stdout.strip()
+    branch = git(["git", "rev-parse", "--abbrev-ref", "HEAD"])
+    commit = git(["git", "rev-parse", "HEAD"])
+    print(f"Start: {branch} @ {commit[:8]}")
 
-        original_commit_result = run_git_command(["git", "rev-parse", "HEAD"])
-        if original_commit_result.returncode != 0:
-            raise ValueError("Failed to get original commit")
-        original_commit = original_commit_result.stdout.strip()
-
-        print("Starting from branch: " + original_branch)
-        print("Starting from commit: " + original_commit)
-    except Exception as e:
-        print("Error getting initial git state: " + str(e))
-        raise
-
-    # === 4. Vorbereitung ===
-    work_examples = data.get("workExample", [])
-    if not work_examples:
-        print("No workExample entries found in zenodo.json. Skipping branch creation.")
+    funcs = data.get("workExample", [])
+    if not funcs:
+        print("No functions in zenodo.json")
         sys.exit(0)
 
-    print("Found {} functions to process.\n".format(len(work_examples)))
-
     dashboard = []
-    failed_functions = []
+    failed = []
 
-    # === 5. Branches erstellen ===
-    for idx, func in enumerate(work_examples, 1):
+    for i, f in enumerate(funcs, 1):
         try:
-            func_name = func.get("name", "unknown-{}".format(idx))
-            safe_name = func_name.replace(' ', '-').replace('_', '-').replace('/', '-').replace('\\', '-').lower()
-            branch_name = "func-{}-v{}".format(safe_name, idx)
-            filename = "functions/{}.json".format(safe_name)
+            name = f.get("name", f"func-{i}")
+            safe = "".join(c if c.isalnum() or c in "-_" else "-" for c in name.lower())
+            bname = f"func-{safe}-v{i}"
+            path = f"functions/{safe}.json"
 
-            print("Processing [{}/{}]: {} to {}".format(idx, len(work_examples), func_name, branch_name))
+            print(f"[{i}/{len(funcs)}] {name} → {bname}")
 
-            # --- Zurück auf sauberen Start-Commit ---
-            print("  Resetting to clean commit {}...".format(original_commit[:8]))
-            run_git_command(["git", "reset", "--hard", original_commit], check=True)
-            run_git_command(["git", "clean", "-fd"], check=True)
+            # Reset
+            subprocess.run(["git", "reset", "--hard", commit], check=True)
+            subprocess.run(["git", "clean", "-fd"], check=True)
 
-            # --- Neuen Branch erstellen (prüfen, ob existiert) ---
-            print("  Creating branch: " + branch_name)
-            create_result = run_git_command(["git", "checkout", "-b", branch_name], check=False)
-            if create_result.returncode != 0:
-                if "already exists" in (create_result.stderr or ""):
-                    print("  Branch {} exists. Switching and resetting...".format(branch_name))
-                    run_git_command(["git", "checkout", branch_name], check=True)
-                    run_git_command(["git", "reset", "--hard", original_commit], check=True)
-                    run_git_command(["git", "clean", "-fd"], check=True)
-                else:
-                    raise ValueError("Failed to create/switch branch: {}".format(create_result.stderr))
+            # Branch
+            res = subprocess.run(["git", "checkout", "-b", bname], capture_output=True, text=True)
+            if res.returncode != 0 and "already exists" in res.stderr:
+                subprocess.run(["git", "checkout", bname], check=True)
+                subprocess.run(["git", "reset", "--hard", commit], check=True)
+                subprocess.run(["git", "clean", "-fd"], check=True)
 
-            # --- Datei schreiben ---
-            try:
-                os.makedirs("functions", exist_ok=True)
-                with open(filename, "w", encoding="utf-8") as f:
-                    json5.dump({"workExample": [func]}, f, indent=2, quote_keys=True)
-                print("  Created: " + filename)
-            except Exception as e:
-                raise ValueError("File write failed: " + str(e))
+            # Datei
+            os.makedirs("functions", exist_ok=True)
+            with open(path, "w", encoding="utf-8") as fp:
+                json5.dump({"workExample": [f]}, fp, indent=2)
 
-            # --- Commit ---
-            run_git_command(["git", "add", filename], check=True)
-            commit_msg = "feat: add function {} v{}".format(func_name, idx)
-            run_git_command(["git", "commit", "-m", commit_msg], check=True)
-            print("  Committed: " + commit_msg)
+            # Commit & Push
+            subprocess.run(["git", "add", path], check=True)
+            subprocess.run(["git", "commit", "-m", f"feat: {name} v{i}"], check=True)
+            push = subprocess.run(["git", "push", "-u", "origin", bname], capture_output=True, text=True)
+            if push.returncode != 0 and "already exists" in push.stderr:
+                subprocess.run(["git", "push", "--force-with-lease", "origin", bname], check=True)
 
-            # --- Push mit Fehlerbehandlung ---
-            push_result = run_git_command(["git", "push", "-u", "origin", branch_name], check=False)
-            if push_result.returncode != 0:
-                error_msg = (push_result.stderr or "").strip()
-                if "already exists" in error_msg or "GH006" in error_msg:
-                    print("  Branch {} exists remotely. Forcing push...".format(branch_name))
-                    run_git_command(["git", "push", "--force-with-lease", "origin", branch_name], check=True)
-                else:
-                    raise ValueError("Push failed: " + error_msg)
-
-            print("  Successfully pushed: " + branch_name)
-            dashboard.append({"Function": func_name, "Branch": branch_name, "Version": idx, "File": filename})
+            print(f"Pushed {bname}")
+            dashboard.append({"Function": name, "Branch": bname, "Version": i})
 
         except Exception as e:
-            print("  FAILED to process {}: {}".format(branch_name, e))
-            failed_functions.append({"Function": func_name, "Error": str(e)})
-            # Branch bereinigen, falls teilweise erstellt
+            print(f"FAILED {bname}: {e}")
+            failed.append({"Function": name, "Error": str(e)})
             try:
-                run_git_command(["git", "checkout", original_branch], check=True)
-                run_git_command(["git", "branch", "-D", branch_name], check=False)
-            except Exception as cleanup_e:
-                print("  Cleanup failed: " + str(cleanup_e))
-            # Weiter mit nächster Funktion
-            continue
+                subprocess.run(["git", "checkout", branch], check=True)
+                subprocess.run(["git", "branch", "-D", bname], check=True)
+            except:
+                pass
 
-    # === 6. Zurück zum Original-Branch ===
-    print("\nReturning to original branch: " + original_branch)
-    try:
-        run_git_command(["git", "checkout", original_branch], check=True)
-        run_git_command(["git", "reset", "--hard", original_commit], check=True)
-        run_git_command(["git", "clean", "-fd"], check=True)
-    except Exception as e:
-        print("Warning: Could not fully restore original branch: " + str(e))
+    # Zurück + Dashboard
+    subprocess.run(["git", "checkout", branch], check=True)
+    subprocess.run(["git", "reset", "--hard", commit], check=True)
 
-    # === 7. Dashboard speichern ===
-    print("\nCreating dashboard...")
-    try:
-        os.makedirs("dashboard", exist_ok=True)
-        dashboard_file = "dashboard/functions-dashboard.json"
-        with open(dashboard_file, "w", encoding="utf-8") as f:
-            json5.dump(dashboard, f, indent=2, quote_keys=True)
-    except Exception as e:
-        print("Failed to save dashboard: " + str(e))
+    os.makedirs("dashboard", exist_ok=True)
+    with open("dashboard/functions-dashboard.json", "w", encoding="utf-8") as f:
+        json5.dump(dashboard, f, indent=2)
 
-    # === 8. Dashboard ausgeben ===
-    print("\n" + "="*50)
-    print(" FUNCTIONS DASHBOARD")
-    print("="*50)
-    if dashboard:
-        print(tabulate(dashboard, headers="keys", tablefmt="github"))
-    else:
-        print("No functions were successfully processed.")
-    print("\nDashboard saved to: " + dashboard_file)
+    print("\nDASHBOARD".center(50, "="))
+    print(tabulate(dashboard or [{"Info": "No success"}], headers="keys", tablefmt="github"))
+    if failed:
+        print("\nFAILED".center(50, "="))
+        print(tabulate(failed, headers="keys", tablefmt="github"))
 
-    if failed_functions:
-        print("\n" + "="*50)
-        print(" FAILED FUNCTIONS")
-        print("="*50)
-        print(tabulate(failed_functions, headers="keys", tablefmt="github"))
-except Exception as main_e:
-    print("Critical error in main execution: " + str(main_e))
-    # Versuche, Dashboard trotzdem zu speichern, falls möglich
-    try:
-        if 'dashboard' in locals():
-            with open("dashboard/functions-dashboard.json", "w", encoding="utf-8") as f:
-                json5.dump(dashboard, f, indent=2, quote_keys=True)
-    except:
-        pass
+except Exception as e:
+    print(f"CRITICAL ERROR: {e}")
     sys.exit(1)
 EOF
 
-      # Dashboard als Artifact hochladen (auch bei Fehlern)
-      - name: Upload dashboard artifact
+      - name: Upload dashboard
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: functions-dashboard
           path: dashboard/functions-dashboard.json
-          if-no-files-found: ignore  # Kein Fehler, wenn Datei fehlt
+          if-no-files-found: ignore
 
-      # Dashboard ins Haupt-Repo committen (auch bei Fehlern)
-      - name: Commit and push dashboard to main branch
+      - name: Commit dashboard
         if: always()
-        continue-on-error: true
         run: |
-          git config user.name "github-actions[bot]" || true
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com" || true
-          git add dashboard/functions-dashboard.json || true
-          git commit -m "chore: update functions dashboard" || echo "No changes to commit"
-          git push origin HEAD:${{ github.ref_name }} || echo "Push failed, continuing"
+          git config user.name "github-actions[bot]"
+          git config user.email "actions@github.com"
+          git add dashboard/functions-dashboard.json 2>/dev/null || true
+          git commit -m "chore: update dashboard" || echo "No changes"
+          git push origin HEAD:${{ github.ref_name }} || echo "Push failed"
