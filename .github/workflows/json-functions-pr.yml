@@ -8,16 +8,16 @@ jobs:
   update-functions:
     runs-on: ubuntu-latest
 
-    # Berechtigungen hinzufügen, um das Pushen neuer Branches zu erlauben
+    # Berechtigungen: Schreibrechte für Branches und Commits
     permissions:
       contents: write
 
     steps:
-      # Repository auschecken
+      # Repository auschecken (vollständiger Verlauf nötig)
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Wichtig, um den Verlauf für das Branching zu haben
+          fetch-depth: 0
 
       # Python einrichten
       - name: Setup Python
@@ -31,102 +31,62 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install json5 tabulate
 
-      # Funktionen verarbeiten
-      - name: Process functions
+      # Funktionen verarbeiten und Branches erstellen
+      - name: Process functions and create branches
         run: |
           python - << 'EOF'
 import json5, os, subprocess, sys
 from tabulate import tabulate
 
-# Prüfen, ob die JSON-Datei existiert
+# === 1. Prüfen: JSON-Datei vorhanden? ===
 json_file = "zenodo.json"
 if not os.path.exists(json_file):
-    print(f"ERROR: {json_file} not found!")
+    print(f"ERROR: {json_file} not found in repository root!")
     sys.exit(1)
 
-# JSON laden
+# === 2. JSON laden ===
 try:
-    with open(json_file, "r") as f:
+    with open(json_file, "r", encoding="utf-8") as f:
         data = json5.load(f)
 except Exception as e:
     print(f"Error loading {json_file}: {e}")
     sys.exit(1)
 
-# Den ursprünglichen Commit-Hash speichern, von dem aus alle Branches starten sollen
+# === 3. Ursprünglichen Zustand sichern ===
 try:
+    original_branch = subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"]).decode().strip()
     original_commit = subprocess.check_output(["git", "rev-parse", "HEAD"]).decode().strip()
+    print(f"Starting from branch: {original_branch}")
     print(f"Starting from commit: {original_commit}")
 except subprocess.CalledProcessError as e:
-    print(f"Error getting initial commit: {e}")
+    print(f"Error getting initial git state: {e}")
     sys.exit(1)
 
-dashboard = []
+# === 4. Vorbereitung ===
 work_examples = data.get("workExample", [])
-print(f"Found {len(work_examples)} functions to process.")
+if not work_examples:
+    print("No workExample entries found in zenodo.json. Skipping branch creation.")
+    sys.exit(0)
 
-# Branches erstellen und committen
+print(f"Found {len(work_examples)} functions to process.\n")
+
+dashboard = []
+
+# === 5. Branches erstellen ===
 for idx, func in enumerate(work_examples, 1):
-    branch_name = f"func-{func['name'].replace(' ', '-').lower()}-v{idx}"
-    print(f"\nProcessing {idx}/{len(work_examples)}: {func['name']} -> {branch_name}")
+    func_name = func.get("name", f"unknown-{idx}")
+    safe_name = func_name.replace(' ', '-').replace('_', '-').lower()
+    branch_name = f"func-{safe_name}-v{idx}"
+    filename = f"functions/{safe_name}.json"
+
+    print(f"Processing [{idx}/{len(work_examples)}]: {func_name} → {branch_name}")
 
     try:
-        # --- KORREKTUR: Zum ursprünglichen Commit zurückkehren ---
-        print(f"Checking out original commit {original_commit}...")
-        subprocess.run(["git", "checkout", original_commit], check=True, capture_output=True)
+        # --- Zurück auf sauberen Start-Commit ---
+        print(f"  Resetting to clean commit {original_commit[:8]}...")
+        subprocess.run(["git", "reset", "--hard", original_commit], check=True, capture_output=True)
+        subprocess.run(["git", "clean", "-fd"], check=True, capture_output=True)
 
-        # Branch erstellen
-        print(f"Creating new branch {branch_name}...")
-        subprocess.run(["git", "checkout", "-b", branch_name], check=True, capture_output=True)
-
-        # Datei erstellen und schreiben
-        os.makedirs("functions", exist_ok=True)
-        filename = f"functions/{func['name'].replace(' ', '-').lower()}.json"
-        with open(filename, "w") as f:
-            json5.dump({"workExample": [func]}, f, indent=2)
-        print(f"Created file: {filename}")
-
-        # Git-Operationen
-        subprocess.run(["git", "add", filename], check=True)
-        subprocess.run(["git", "commit", "-m", f"Add function {func['name']} v{idx}"], check=True)
-        print("Committing file...")
-        subprocess.run(["git", "push", "-u", "origin", branch_name], check=True)
-        print(f"Successfully pushed {branch_name}")
-        
-        dashboard.append({"Function": func["name"], "Branch": branch_name, "Version": idx})
-
-    except subprocess.CalledProcessError as e:
-        print(f"!!! FAILED to process {branch_name} !!!")
-        print(f"Error: {e}")
-        print(f"STDOUT: {e.stdout.decode()}")
-        print(f"STDERR: {e.stderr.decode()}")
-        # Zum nächsten Branch übergehen, anstatt abzubrechen
-    except Exception as e:
-        print(f"An unexpected error occurred for {branch_name}: {e}")
-
-
-# --- KORREKTUR: Zum ursprünglichen Commit zurückkehren, bevor das Dashboard erstellt wird ---
-print("\nFunction processing complete. Returning to original commit for dashboard creation.")
-try:
-    subprocess.run(["git", "checkout", original_commit], check=True, capture_output=True)
-except subprocess.CalledProcessError as e:
-    print(f"Warning: Could not check out original commit after loop: {e.stderr.decode()}")
-
-# Dashboard speichern
-print("Creating dashboard file...")
-os.makedirs("dashboard", exist_ok=True)
-dashboard_file = "dashboard/functions-dashboard.json"
-with open(dashboard_file, "w") as f:
-    json5.dump(dashboard, f, indent=2)
-
-print("\n==== FUNCTIONS DASHBOARD ====\n")
-print(tabulate(dashboard, headers="keys", tablefmt="github"))
-print(f"\nDashboard saved to {dashboard_file}")
-EOF
-
-      # Dashboard hochladen
-      - name: Upload dashboard
-        uses: actions/upload-artifact@v4
-        with:
-          name: functions-dashboard
-          path: dashboard/functions-dashboard.json
-
+        # --- Neuen Branch erstellen ---
+        print(f"  Creating branch: {branch_name}")
+        subprocess.run(["git", "checkout", "-b", branch_name], check=True, capture
