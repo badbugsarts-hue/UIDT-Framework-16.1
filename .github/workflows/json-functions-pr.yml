@@ -26,121 +26,102 @@ jobs:
           python -m pip install json5 tabulate
 
       - name: Process functions and create branches
+        shell: python
         run: |
-          python - <<'EOF'
-import json5
-import os
-import subprocess
-import sys
-from tabulate import tabulate
+          import json5
+          import os
+          import subprocess
+          import sys
+          from tabulate import tabulate
 
-def git(cmd, check=True):
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, check=check, timeout=300)
-        return result.stdout.strip()
-    except subprocess.CalledProcessError as e:
-        print(f"Git failed: {' '.join(cmd)}\n{e.stderr}")
-        if check:
-            raise
-        return ""
+          def git(cmd, check=True):
+              try:
+                  result = subprocess.run(cmd, capture_output=True, text=True, check=check, timeout=300)
+                  return result.stdout.strip()
+              except subprocess.CalledProcessError as e:
+                  print(f"Git failed: {' '.join(cmd)}\n{e.stderr}")
+                  if check:
+                      raise
+                  return ""
 
-# --- Hauptlogik ---
-try:
-    if not os.path.exists("zenodo.json"):
-        print("ERROR: zenodo.json not found!")
-        sys.exit(1)
+          # --- Hauptlogik ---
+          try:
+              if not os.path.exists("zenodo.json"):
+                  print("ERROR: zenodo.json not found!")
+                  sys.exit(1)
 
-    with open("zenodo.json", "r", encoding="utf-8") as f:
-        data = json5.load(f)
+              with open("zenodo.json", "r", encoding="utf-8") as f:
+                  data = json5.load(f)
 
-    branch = git(["git", "rev-parse", "--abbrev-ref", "HEAD"])
-    commit = git(["git", "rev-parse", "HEAD"])
-    print(f"Start: {branch} @ {commit[:8]}")
+              branch = git(["git", "rev-parse", "--abbrev-ref", "HEAD"])
+              commit = git(["git", "rev-parse", "HEAD"])
+              print(f"Start: {branch} @ {commit[:8]}")
 
-    funcs = data.get("workExample", [])
-    if not funcs:
-        print("No functions in zenodo.json")
-        sys.exit(0)
+              funcs = data.get("workExample", [])
+              if not funcs:
+                  print("No functions in zenodo.json")
+                  sys.exit(0)
 
-    dashboard = []
-    failed = []
+              dashboard = []
+              failed = []
 
-    for i, f in enumerate(funcs, 1):
-        try:
-            name = f.get("name", f"func-{i}")
-            safe = "".join(c if c.isalnum() or c in "-_" else "-" for c in name.lower())
-            bname = f"func-{safe}-v{i}"
-            path = f"functions/{safe}.json"
+              for i, f in enumerate(funcs, 1):
+                  try:
+                      name = f.get("name", f"func-{i}")
+                      safe = "".join(c if c.isalnum() or c in "-_" else "-" for c in name.lower())
+                      bname = f"func-{safe}-v{i}"
+                      path = f"functions/{safe}.json"
 
-            print(f"[{i}/{len(funcs)}] {name} → {bname}")
+                      print(f"[{i}/{len(funcs)}] {name} → {bname}")
 
-            # Reset
-            subprocess.run(["git", "reset", "--hard", commit], check=True)
-            subprocess.run(["git", "clean", "-fd"], check=True)
+                      # Reset
+                      subprocess.run(["git", "reset", "--hard", commit], check=True)
+                      subprocess.run(["git", "clean", "-fd"], check=True)
 
-            # Branch
-            res = subprocess.run(["git", "checkout", "-b", bname], capture_output=True, text=True)
-            if res.returncode != 0 and "already exists" in res.stderr:
-                subprocess.run(["git", "checkout", bname], check=True)
-                subprocess.run(["git", "reset", "--hard", commit], check=True)
-                subprocess.run(["git", "clean", "-fd"], check=True)
+                      # Branch
+                      res = subprocess.run(["git", "checkout", "-b", bname], capture_output=True, text=True)
+                      if res.returncode != 0 and "already exists" in res.stderr:
+                          subprocess.run(["git", "checkout", bname], check=True)
+                          subprocess.run(["git", "reset", "--hard", commit], check=True)
+                          subprocess.run(["git", "clean", "-fd"], check=True)
 
-            # Datei
-            os.makedirs("functions", exist_ok=True)
-            with open(path, "w", encoding="utf-8") as fp:
-                json5.dump({"workExample": [f]}, fp, indent=2)
+                      # Datei
+                      os.makedirs("functions", exist_ok=True)
+                      with open(path, "w", encoding="utf-8") as fp:
+                          json5.dump({"workExample": [f]}, fp, indent=2)
 
-            # Commit & Push
-            subprocess.run(["git", "add", path], check=True)
-            subprocess.run(["git", "commit", "-m", f"feat: {name} v{i}"], check=True)
-            push = subprocess.run(["git", "push", "-u", "origin", bname], capture_output=True, text=True)
-            if push.returncode != 0 and "already exists" in push.stderr:
-                subprocess.run(["git", "push", "--force-with-lease", "origin", bname], check=True)
+                      # Commit & Push
+                      subprocess.run(["git", "add", path], check=True)
+                      subprocess.run(["git", "commit", "-m", f"feat: {name} v{i}"], check=True)
+                      push = subprocess.run(["git", "push", "-u", "origin", bname], capture_output=True, text=True)
+                      if push.returncode != 0 and "already exists" in push.stderr:
+                          subprocess.run(["git", "push", "--force-with-lease", "origin", bname], check=True)
 
-            print(f"Pushed {bname}")
-            dashboard.append({"Function": name, "Branch": bname, "Version": i})
+                      print(f"Pushed {bname}")
+                      dashboard.append({"Function": name, "Branch": bname, "Version": i})
 
-        except Exception as e:
-            print(f"FAILED {bname}: {e}")
-            failed.append({"Function": name, "Error": str(e)})
-            try:
-                subprocess.run(["git", "checkout", branch], check=True)
-                subprocess.run(["git", "branch", "-D", bname], check=True)
-            except:
-                pass
+                  except Exception as e:
+                      print(f"FAILED {bname}: {e}")
+                      failed.append({"Function": name, "Error": str(e)})
+                      try:
+                          subprocess.run(["git", "checkout", branch], check=True)
+                          subprocess.run(["git", "branch", "-D", bname], check=True)
+                      except:
+                          pass
 
-    # Zurück + Dashboard
-    subprocess.run(["git", "checkout", branch], check=True)
-    subprocess.run(["git", "reset", "--hard", commit], check=True)
+              # Zurück + Dashboard
+              subprocess.run(["git", "checkout", branch], check=True)
+              subprocess.run(["git", "reset", "--hard", commit], check=True)
 
-    os.makedirs("dashboard", exist_ok=True)
-    with open("dashboard/functions-dashboard.json", "w", encoding="utf-8") as f:
-        json5.dump(dashboard, f, indent=2)
+              os.makedirs("dashboard", exist_ok=True)
+              with open("dashboard/functions-dashboard.json", "w", encoding="utf-8") as f:
+                  json5.dump(dashboard, f, indent=2)
 
-    print("\nDASHBOARD".center(50, "="))
-    print(tabulate(dashboard or [{"Info": "No success"}], headers="keys", tablefmt="github"))
-    if failed:
-        print("\nFAILED".center(50, "="))
-        print(tabulate(failed, headers="keys", tablefmt="github"))
+              print("\nDASHBOARD".center(50, "="))
+              print(tabulate(dashboard or [{"Info": "No success"}], headers="keys", tablefmt="github"))
+              if failed:
+                  print("\nFAILED".center(50, "="))
+                  print(tabulate(failed, headers="keys", tablefmt="github"))
 
-except Exception as e:
-    print(f"CRITICAL ERROR: {e}")
-    sys.exit(1)
-EOF
-
-      - name: Upload dashboard
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: functions-dashboard
-          path: dashboard/functions-dashboard.json
-          if-no-files-found: ignore
-
-      - name: Commit dashboard
-        if: always()
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "actions@github.com"
-          git add dashboard/functions-dashboard.json 2>/dev/null || true
-          git commit -m "chore: update dashboard" || echo "No changes"
-          git push origin HEAD:${{ github.ref_name }} || echo "Push failed"
+          except Exception as e:
+              print(f"CRITICAL ERROR:
