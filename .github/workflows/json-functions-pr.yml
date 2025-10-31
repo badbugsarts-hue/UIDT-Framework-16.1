@@ -17,7 +17,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0 # Wichtig, um den Verlauf für das Branching zu haben
 
       # Python einrichten
       - name: Setup Python
@@ -70,7 +70,7 @@ for idx, func in enumerate(work_examples, 1):
     print(f"\nProcessing {idx}/{len(work_examples)}: {func['name']} -> {branch_name}")
 
     try:
-        # --- KORREKTUR: Zum ursprünglichen Commit zurückkehren ---
+        # --- Zuerst zum ursprünglichen Commit zurückkehren (wichtig!) ---
         print(f"Checking out original commit {original_commit}...")
         subprocess.run(["git", "checkout", original_commit], check=True, capture_output=True)
 
@@ -104,7 +104,7 @@ for idx, func in enumerate(work_examples, 1):
         print(f"An unexpected error occurred for {branch_name}: {e}")
 
 
-# --- KORREKTUR: Zum ursprünglichen Commit zurückkehren, bevor das Dashboard erstellt wird ---
+# --- Zum ursprünglichen Commit zurückkehren, bevor das Dashboard erstellt wird ---
 print("\nFunction processing complete. Returning to original commit for dashboard creation.")
 try:
     subprocess.run(["git", "checkout", original_commit], check=True, capture_output=True)
