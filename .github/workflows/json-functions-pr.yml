@@ -35,7 +35,7 @@ jobs:
       - name: Process functions and create branches
         continue-on-error: true  # Fortfahren, auch bei Fehlern in diesem Step
         run: |
-          python - << 'EOF'
+          python - <<'EOF'
 import json5
 import os
 import subprocess
