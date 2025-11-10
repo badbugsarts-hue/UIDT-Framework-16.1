@@ -1,4 +1,34 @@
-```markdown
+## ⚠️ IMPORTANT UPDATE — November 9, 2025
+
+The **canonical UIDT parameters** are now formally established in **Technical Note V3.2**:
+
+- 📄 **DOI**: [10.5281/zenodo.17554179](https://doi.org/10.5281/zenodo.17554179)
+- 📌 **Canonical Parameters**:
+  - \( m_S = 1.705~\mathrm{GeV} \)
+  - \( \kappa = 0.500 \)
+  - \( \lambda_S = 0.417 \)
+  - \( \gamma = 16.3 \)
+- 🧠 **Mass Gap**: \( \Delta = 1710~\mathrm{MeV} \) — in exact agreement with lattice QCD
+
+---
+
+### 🚫 SUPERSEDED MATERIALS IN THIS PROJECT
+
+The following components are **formally withdrawn or deprecated**:
+
+- ❌ Sections **7.1** and **10.6** of *Ultra Report v16*  
+- ❌ Files containing:
+  - \( \gamma = 2.71 \)
+  - \( \gamma = 12.5 \)
+  - \( \Delta = 1580 \pm 120~\mathrm{MeV} \)
+- 🧪 Python notebooks using **non-canonical parameters** are retained **for reference only**
+
+---
+
+### ✅ Canonical Reference
+
+For all current and future work, **always refer to V3.2** and the DOI above.  
+This ensures consistency, reproducibility, and alignment with validated lattice QCD results.
 # Axiomatic Closure Document
 
 ## Core Axioms
@@ -63,4 +93,3 @@ preferred-citation:
   title: "Unified Information-Density Theory (UIDT) Master Protocol"
   version: "15"
   date-published: 2025-10-24
-```
