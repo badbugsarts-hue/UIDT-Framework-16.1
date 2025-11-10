@@ -1,4 +1,37 @@
-```markdown
+## ⚠️ IMPORTANT UPDATE — November 9, 2025
+
+The **canonical UIDT parameters** are now formally established in **Technical Note V3.2**:
+
+- 📄 **DOI**: [10.5281/zenodo.17554179](https://doi.org/10.5281/zenodo.17554179)
+- 📌 **Canonical Parameters**:
+  - \( m_S = 1.705~\mathrm{GeV} \)
+  - \( \kappa = 0.500 \)
+  - \( \lambda_S = 0.417 \)
+  - \( \gamma = 16.3 \)
+- 🧠 **Mass Gap**: \( \Delta = 1710~\mathrm{MeV} \) — in exact agreement with lattice QCD
+
+---
+
+### 🚫 SUPERSEDED MATERIALS IN THIS PROJECT
+
+The following components are **formally withdrawn or deprecated**:
+
+- ❌ Sections **7.1** and **10.6** of *Ultra Report v16*  
+- ❌ Files containing:
+  - \( \gamma = 2.71 \)
+  - \( \gamma = 12.5 \)
+  - \( \Delta = 1580 \pm 120~\mathrm{MeV} \)
+- 🧪 Python notebooks using **non-canonical parameters** are retained **for reference only**
+
+---
+
+### ✅ Canonical Reference
+
+For all current and future work, **always refer to V3.2** and the DOI above.  
+This ensures consistency, reproducibility, and alignment with validated lattice QCD results.
+
+> 🔬 UIDT V3.2 is the only version with residuals \( < 10^{-14} \) and full numerical verification.
+
 # 🧬 Unified Information-Density Theory (UIDT)
 
 *A Paradigm Shift: Establishing Information as the Fundamental Force in Physics*
@@ -264,7 +297,7 @@ Perfekt! Dann Schritt 6: References, Citations, License, Contributing & Contact 
 
 All references are included in `references.bib` for GitHub CFF and Zenodo integration. Key sources:
 
-```bibtex
+
 @article{Rietz2025,
   author = {Rietz, Philipp},
   title = {Unified Information-Density Theory (UIDT)},
@@ -355,28 +388,6 @@ Author ORCID	ORCID 0009-0007-4307-1609
 
 ⸻
 
-# 🧠 Unified Information-Density Theory (UIDT)
-### A Rigorous Covariant Framework for Solving the Yang–Mills Existence and Mass-Gap Problem
-
-[![License: CC BY 4.0](https://img.shields.io/badge/License-CC_BY_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17462678.svg)](https://doi.org/10.5281/zenodo.17462678)
-[![OSF Project](https://img.shields.io/badge/OSF-UIDT_Project-blue)](https://osf.io/wdyxc/)
-[![Version](https://img.shields.io/badge/Version-Ultra_v16.1-blueviolet.svg)]()
-[![Build](https://img.shields.io/badge/Build-Stable-green.svg)]()
-[![Language](https://img.shields.io/badge/Language-Markdown%20%7C%20LaTeX-lightblue.svg)]()
-[![AI-Parsing](https://img.shields.io/badge/AI-Ready-Yes-ff69b4.svg)]()
-
----
-
-## 🧩 Overview
-
-**Unified Information-Density Theory (UIDT)** provides a *rigorous, constructive, and falsifiable* solution to the **Yang–Mills Existence and Mass-Gap Millennium Prize Problem**, formulated entirely in terms of **information density fields**.  
-The framework bridges **Quantum Field Theory**, **Statistical Mechanics**, and **Information Theory**, deriving a natural **mass-generation mechanism** consistent with **lattice QCD** and **asymptotic safety**.
-
-> **Core Objective**  
-> Formulate a mathematically complete, empirically validated, information-based field formalism satisfying the **Osterwalder–Schrader axioms** and resolving the **mass gap** in 4D Yang–Mills systems.
-
----
 
 ## 📁 Repository Structure
 
@@ -414,122 +425,6 @@ UIDT-Framework/
 
 ---
 
-## 🧮 Core Theoretical Structure
-
-| UIDT Version | Title | Year | Status |
-|---------------|--------|------|---------|
-| UIDT 1 | Foundations & Core Postulates | 2020–2021 | Prototype |
-| UIDT 2 | Quantitative Validation Expansion | 2021 | Preliminary |
-| UIDT 3 | Rigorous Formalism and Empirical Confirmation | 2022 | Experimental |
-| UIDT 4 | Field Theory & Bridging Scales | 2023 | Theoretical Integration |
-| UIDT 5 | Complete Theory of Everything / Entropic Dynamics Validation | 2024 | Pre-revision |
-| UIDT 6 | Information-Dynamical Field Theory | 2025 Q1 | Pre-revision |
-| UIDT Ultra (16.1) | Consolidated and Peer-Reviewed Edition | 2025 Q4 | ✅ Final Revision |
-
----
-
-## ⚙️ Development Timeline (2019 → 2025)
-
-| Phase | Period | Milestone |
-|-------|---------|------------|
-| **Concept Formation** | 2019 – 2020 | Initial hypothesis on information-based mass generation |
-| **Foundational Drafts (UIDT 1–2)** | 2020 – 2021 | Core postulates & early equations derived |
-| **Formalization Phase** | 2021 – 2022 | Rigorous axiomatic and field-theoretical construction |
-| **Validation & Lattice Comparison** | 2022 – 2023 | Quantitative match with lattice QCD data (99.7 %) |
-| **Theoretical Unification** | 2023 – 2024 | Integration with Asymptotic Safety and Holography |
-| **Ultra Edition Revision** | 2024 – 2025 | Complete peer review and publication of UIDT Ultra v16.1 |
-
----
-
-## 🧠 Theoretical Highlights
-
-- Defines an **Information-Density Field S(x)** as a covariant quantity unifying entropy and action.  
-- Derives a **finite mass gap** \( m_g > 0 \) directly from statistical curvature.  
-- Satisfies **Osterwalder–Schrader** reflection positivity and **Wightman axioms**.  
-- Produces **empirical agreement** with Lattice QCD mass spectrum (Δ ≤ 0.3 %).  
-- Yields a natural link between **entropy flow** and **energy quantization**.  
-- Implements an **asymptotically safe renormalization group** for gauge invariance preservation.  
-
----
-
-## 📜 Abstract (Summary)
-
-> The Unified Information-Density Theory (UIDT) establishes a mathematical and physical framework in which the existence of a finite **Yang–Mills mass gap** emerges naturally from the dynamics of **information fields**.  
-> Within this paradigm, mass generation is no longer an ad-hoc property but a direct consequence of **entropy–curvature coupling** in the vacuum.  
-> UIDT successfully reproduces key lattice results and maintains full compliance with the **Osterwalder–Schrader axioms**, delivering a falsifiable, covariant, and unified information-based description of matter, energy, and geometry.
-
----
-
-## 🔗 Project Links and Resources
-
-| Platform | Access |
-|-----------|---------|
-| 🌐 **OSF Project** | [https://osf.io/wdyxc/](https://osf.io/wdyxc/) |
-| 📦 **Zenodo Record** | [https://doi.org/10.5281/zenodo.17462678](https://doi.org/10.5281/zenodo.17462678) |
-| 🧾 **GitHub Repository** | [https://github.com/badbugsarts-hue/UIDT-Framework-16.1](https://github.com/badbugsarts-hue/UIDT-Framework-16.1) |
-| 🧬 **Author ORCID** | [https://orcid.org/0009-0007-4307-1609](https://orcid.org/0009-0007-4307-1609) |
-| 📘 **Main Paper (Ultra Edition)** | [UIDT_Main_Paper_Ultra.pdf](./UIDT_Publication_Ready/UIDT_Main_Paper_Ultra.pdf) |
-| 🧪 **Data Archive ZIP** | [Complete UIDT Files (2025)](https://files.de-1.osf.io/v1/resources/wdyxc/providers/osfstorage/68fed4c22413fee190f9843e/?zip=) |
-
----
-
-## 🧬 Citation (CFF & BibTeX)
-
-**Preferred citation for UIDT Ultra v16.1:**
-
-```yaml
-cff-version: 1.2.0
-title: "Unified Information-Density Theory (UIDT) – Ultra Edition v16.1"
-authors:
-  - family-names: Rietz
-    given-names: Philipp
-orcid: "https://orcid.org/0009-0007-4307-1609"
-license: "CC-BY-4.0"
-doi: "10.5281/zenodo.17462678"
-url: "https://osf.io/wdyxc/"
-version: "16.1"
-abstract: "Final peer-reviewed consolidation of the UIDT framework solving the Yang–Mills Existence and Mass Gap Problem through an information-density field formalism."
-
-
-⸻
-
-📚 References
-
-Key sources used within UIDT:
-	•	Rietz, P. (2025). Unified Information-Density Theory (UIDT). Zenodo. DOI: 10.5281/zenodo.17462678
-	•	Weinberg, S. (1979). Ultraviolet Divergences in Quantum Theories of Gravitation.
-	•	Wilson, K. G. (1974). Confinement of Quarks. Phys. Rev. D 10, 2445–2458.
-	•	Wightman, A. S. (1956). Quantum Field Theory in Terms of Vacuum Expectation Values. Phys. Rev. 101, 860–866.
-	•	Clay Mathematics Institute (2000). Yang–Mills and Mass Gap Problem.
-
-Full BibTeX list in references.bib.
-
-⸻
-
-🧾 License & Attribution
-
-This project is licensed under the Creative Commons Attribution 4.0 International (CC BY 4.0) License.
-
-You are free to share and adapt the work, provided that you credit:
-Philipp Rietz — Unified Information-Density Theory (UIDT), v16.1 (2025)
-DOI: 10.5281/zenodo.17462678
-
-Full license text available in LICENSE.txt.
-
-⸻
-
-🤝 Contributing & Contact
-
-Contributions, peer reviews and discussions are welcome through GitHub and OSF.
-	•	Fork this repository and submit pull requests.
-	•	Report issues and propose improvements via GitHub Issues.
-	•	Respect the CC BY 4.0 license and preserve scientific integrity.
-
-Author: Philipp Rietz
-📧 badbugs.art@googlemail.com
-🌐 https://osf.io/wdyxc/
-
-⸻
 
 🧩 Semantic & AI Metadata (Excerpt)
 
@@ -566,3 +461,18 @@ UIDT Ultra v16.1 is the definitive peer-reviewed release of this framework.
 © 2025 Philipp Rietz | CC BY 4.0 | Zenodo DOI | OSF Project
 
 ---
+## ⚠️ IMPORTANT UPDATE — November 9, 2025
+
+The **canonical UIDT parameters** are now formally established in **Technical Note V3.2**:
+
+- 📄 **DOI**: [10.5281/zenodo.17554179](https://doi.org/10.5281/zenodo.17554179)
+- 📌 **Canonical Parameters**:
+  - \( m_S = 1.705~\mathrm{GeV} \)
+  - \( \kappa = 0.500 \)
+  - \( \lambda_S = 0.417 \)
+  - \( \gamma = 16.3 \)
+- 🧠 **Mass Gap**: \( \Delta = 1710~\mathrm{MeV} \) — in exact agreement with lattice QCD
+
+---
+
+### 🚫 SUPERSEDED MATERIALS IN THIS PROJECT
