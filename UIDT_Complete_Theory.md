@@ -1,4 +1,34 @@
-```markdown
+## ⚠️ IMPORTANT UPDATE — November 9, 2025
+
+The **canonical UIDT parameters** are now formally established in **Technical Note V3.2**:
+
+- 📄 **DOI**: [10.5281/zenodo.17554179](https://doi.org/10.5281/zenodo.17554179)
+- 📌 **Canonical Parameters**:
+  - \( m_S = 1.705~\mathrm{GeV} \)
+  - \( \kappa = 0.500 \)
+  - \( \lambda_S = 0.417 \)
+  - \( \gamma = 16.3 \)
+- 🧠 **Mass Gap**: \( \Delta = 1710~\mathrm{MeV} \) — in exact agreement with lattice QCD
+
+---
+
+### 🚫 SUPERSEDED MATERIALS IN THIS PROJECT
+
+The following components are **formally withdrawn or deprecated**:
+
+- ❌ Sections **7.1** and **10.6** of *Ultra Report v16*  
+- ❌ Files containing:
+  - \( \gamma = 2.71 \)
+  - \( \gamma = 12.5 \)
+  - \( \Delta = 1580 \pm 120~\mathrm{MeV} \)
+- 🧪 Python notebooks using **non-canonical parameters** are retained **for reference only**
+
+---
+
+### ✅ Canonical Reference
+
+For all current and future work, **always refer to V3.2** and the DOI above.  
+This ensures consistency, reproducibility, and alignment with validated lattice QCD results.
 # Unified Information-Density Theory (UIDT): Complete Framework
 
 ## Core Axioms
@@ -179,4 +209,4 @@ S_lattice = β∑_□(1 - 1/N Re Tr U_□) + κ_S∑_{x,μ}|∇_μS|² + ∑_x[m
 *First mathematically rigorous SU(N) gauge theory in 4D with proven mass gap and experimental falsifiability*
 
 *First complete SU(N) gauge theory in 4D satisfying all constructive QFT axioms with experimentally falsifiable predictions*
-```
+
